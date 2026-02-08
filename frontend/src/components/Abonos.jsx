@@ -54,9 +54,6 @@ useEffect(() => {
       fecha_pago: fechaPago || null,
     };
 
-
-    console.log("ABONO PAYLOAD:", payload);
-
     if (editandoId) {
       await updateAbono(editandoId, payload);
     } else {
