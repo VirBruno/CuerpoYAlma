@@ -1,0 +1,26 @@
+version: "3.9"
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: cuerpoyalma
+      POSTGRES_PASSWORD: cuerpoyalma
+      POSTGRES_DB: cuerpoyalma_db
+    ports:
+      - "5432:5432"
+
+
+
