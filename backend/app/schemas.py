@@ -59,20 +59,36 @@ class ClaseResponse(ClaseBase):
     class Config:
         from_attributes = True
 
-
 class AbonoBase(BaseModel):
-    mes: str
+    id: int
+    alumna_id: int
+    mes: int
+    clases_incluidas: int
+    clases_usadas: int
+    clases_recuperadas: int
+    fecha_pago: date
+
+class AbonoCreate(AbonoBase):
+    id: int
+    alumna_id: int
+    mes: int
+    clases_incluidas: int
+    clases_usadas: int
+    clases_recuperadas: int
     fecha_pago: date
 
 
-class AbonoCreate(AbonoBase):
-    pass
+class AbonoUpdate(BaseModel):
+    alumna_id: int | None = None
+    mes: int | None = None
+    clases_incluidas: int | None = None
+    clases_usadas: int | None = None
+    clases_recuperadas: int | None = None
+    fecha_pago: date | None = None
 
-class AbonoUpdate(AbonoBase):
-    pass
 
 
-class AbonoResponse(AbonoBase):
+class AbonoResponse(BaseModel):
     id: int
     alumna_id: int
     mes: int
@@ -83,6 +99,7 @@ class AbonoResponse(AbonoBase):
 
     class Config:
         from_attributes = True
+
 
 class ReservaClaseBase(BaseModel):
     alumna_id: int
