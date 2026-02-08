@@ -5,6 +5,7 @@ import {
   updateClase,
   deleteClase,
 } from "../services/clases";
+import { getProfes } from "../services/profes";
 
 export default function Clases() {
   const [clases, setClases] = useState([]);
@@ -15,6 +16,7 @@ export default function Clases() {
   const [nivel, setNivel] = useState("");
   const [profeId, setProfeId] = useState("");
   const [cantidadAlumnas, setCantidadAlumnas] = useState(0);
+  const [profes, setProfes] = useState([]);
 
   const [editandoId, setEditandoId] = useState(null);
 
@@ -23,8 +25,14 @@ export default function Clases() {
     setClases(res.data);
   };
 
+    const cargarProfes = async () => {
+      const res = await getProfes();
+      setProfes(res.data);
+    };
+
   useEffect(() => {
     cargarClases();
+    cargarProfes();
   }, []);
 
   const handleSubmit = async (e) => {
@@ -104,12 +112,18 @@ export default function Clases() {
           onChange={(e) => setNivel(e.target.value)}
         />
 
-        <input
-          placeholder="ID Profe"
+<select
           value={profeId}
           onChange={(e) => setProfeId(e.target.value)}
           required
-        />
+        >
+          <option value="">Seleccionar profe</option>
+          {profes.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.nombre}
+            </option>
+          ))}
+        </select>
 
         <input
           type="number"
