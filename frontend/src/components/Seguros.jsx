@@ -3,6 +3,7 @@ import {
   getSeguros,
   createSeguro,
   deleteSeguro,
+  updateSeguro,
 } from "../services/seguros";
 
 export default function Seguros() {
@@ -10,6 +11,8 @@ export default function Seguros() {
   const [numero, setNumero] = useState("");
   const [fechaVigencia, setFechaVigencia] = useState("");
   const [fechaPago, setFechaPago] = useState("");
+
+  const [editandoId, setEditandoId] = useState(null);
 
   const cargarSeguros = async () => {
     const res = await getSeguros();
@@ -23,11 +26,17 @@ export default function Seguros() {
 const handleSubmit = async (e) => {
   e.preventDefault();
 
-  await createSeguro({
+    const payload = {
     numero: Number(numero),
-    fecha_pago: fechaPago,         // ✔ snake_case
-    fecha_vigencia: fechaVigencia, // ✔ snake_case
-  });
+    fecha_pago: fechaPago,        
+    fecha_vigencia: fechaVigencia, 
+  };
+
+  if (editandoId) {
+    await updateSeguro(editandoId, payload);
+  } else {
+    await createSeguro(payload);
+  }
 
   setNumero("");
   setFechaPago("");
@@ -35,6 +44,14 @@ const handleSubmit = async (e) => {
 
   cargarSeguros();
 };
+
+
+const handleEdit = (seguro) => {
+    setEditandoId(seguro.id);
+    setNumero(seguro.numero);
+    setFechaPago(seguro.fecha_pago);
+    setFechaVigencia(seguro.fecha_vigencia);
+  };
 
   const handleDelete = async (id) => {
     await deleteSeguro(id);
@@ -44,7 +61,6 @@ const handleSubmit = async (e) => {
   return (
     <div>
       <h2>Seguros</h2>
-
       <form onSubmit={handleSubmit}>
         <input
           placeholder="Número"
@@ -66,16 +82,18 @@ const handleSubmit = async (e) => {
           required
         />
 
-        <button type="submit">Crear seguro</button>
+        <button type="submit">
+          {editandoId ? "Guardar cambios" : "Crear seguro"}
+        </button>
+
       </form>
 
       <ul>
         {seguros.map((a) => (
           <li key={a.id}>
             {a.numero} (Fecha Vigencia {a.fechaVigencia} - Fecha Pago {a.fechaPago})
-            <button onClick={() => handleDelete(a.id)}>
-              Eliminar
-            </button>
+            <button onClick={() => handleEdit(a)}>Editar</button>
+            <button onClick={() => handleDelete(a.id)}>Eliminar</button>
           </li>
         ))}
       </ul>

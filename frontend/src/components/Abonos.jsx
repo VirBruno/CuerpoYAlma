@@ -89,7 +89,6 @@ useEffect(() => {
   return (
     <div>
       <h2>Abonos</h2>
-
       <form onSubmit={handleSubmit}>
         <p>Total alumnas: {alumnas.length}</p>
         <select

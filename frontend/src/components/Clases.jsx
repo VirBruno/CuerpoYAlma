@@ -34,6 +34,7 @@ const NIVEL = [
   "Principiante",
   "Intermedio",
   "Avanzado",
+  "Todos",
 ];
 
 const DIA = [
