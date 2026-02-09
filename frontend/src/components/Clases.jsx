@@ -20,6 +20,32 @@ export default function Clases() {
 
   const [editandoId, setEditandoId] = useState(null);
 
+  const DISCIPLINAS = [
+  "Pole fijo",
+  "Pole giratorio",
+  "Aro",
+  "Flexibilidad",
+  "Contemporáneo",
+  "Entrenamiento acrobático",
+  "Calistenia",
+];
+
+const NIVEL = [
+  "Principiante",
+  "Intermedio",
+  "Avanzado",
+];
+
+const DIA = [
+  "Lunes",
+  "Martes",
+  "Miércoles",
+  "Jueves",
+  "Viernes",
+  "Sábado",
+  "Domingo",
+];
+
   const cargarClases = async () => {
     const res = await getClases();
     setClases(res.data);
@@ -85,19 +111,31 @@ export default function Clases() {
       <h2>Clases</h2>
 
       <form onSubmit={handleSubmit}>
-        <input
-          placeholder="Disciplina"
+        <select
           value={disciplina}
           onChange={(e) => setDisciplina(e.target.value)}
           required
-        />
+        >
+          <option value="">Seleccionar disciplina</option>
+          {DISCIPLINAS.map((d) => (
+            <option key={d} value={d}>
+              {d}
+            </option>
+          ))}
+        </select>
 
-        <input
-          placeholder="Día"
+        <select
           value={dia}
           onChange={(e) => setDia(e.target.value)}
           required
-        />
+        >
+          <option value="">Seleccionar día</option>
+          {DIA.map((d) => (
+            <option key={d} value={d}>
+              {d}
+            </option>
+          ))}
+        </select>
 
         <input
           placeholder="Hora (HH:MM)"
@@ -106,11 +144,18 @@ export default function Clases() {
           required
         />
 
-        <input
-          placeholder="Nivel"
+        <select
           value={nivel}
           onChange={(e) => setNivel(e.target.value)}
-        />
+          required
+        >
+          <option value="">Seleccionar nivel</option>
+          {NIVEL.map((d) => (
+            <option key={d} value={d}>
+              {d}
+            </option>
+          ))}
+        </select>
 
 <select
           value={profeId}
