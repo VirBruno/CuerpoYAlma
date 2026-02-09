@@ -3,12 +3,25 @@ import {
   getProfes,
   createProfe,
   deleteProfe,
+  updateProfe,
 } from "../services/profes";
 
 export default function Profes() {
   const [profes, setProfes] = useState([]);
   const [nombre, setNombre] = useState("");
   const [disciplina, setDisciplina] = useState("");
+
+  const [editandoId, setEditandoId] = useState(null);
+
+  const DISCIPLINAS = [
+  "Pole fijo",
+  "Pole giratorio",
+  "Aro",
+  "Flexibilidad",
+  "Contemporáneo",
+  "Entrenamiento acrobático",
+  "Calistenia",
+];
 
   const cargarProfes = async () => {
     const res = await getProfes();
@@ -22,15 +35,27 @@ export default function Profes() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    await createProfe({
+    const payload = ({
       nombre,
       disciplina,
     });
+
+    if (editandoId) {
+      await updateProfe(editandoId, payload);
+    } else {
+      await createProfe(payload);
+    }
 
     setNombre("");
     setDisciplina("");
 
     cargarProfes();
+  };
+
+    const handleEdit = (profe) => {
+    setEditandoId(profe.id);
+    setNombre(profe.nombre);
+    setDisciplina(profe.disciplina);
   };
 
   const handleDelete = async (id) => {
@@ -49,23 +74,30 @@ export default function Profes() {
           onChange={(e) => setNombre(e.target.value)}
           required
         />
-        <input
-          placeholder="Disciplina"
+        <select
           value={disciplina}
           onChange={(e) => setDisciplina(e.target.value)}
           required
-        />
+        >
+          <option value="">Seleccionar disciplina</option>
+          {DISCIPLINAS.map((d) => (
+            <option key={d} value={d}>
+              {d}
+            </option>
+          ))}
+        </select>
 
-        <button type="submit">Crear profe</button>
+      <button type="submit">
+        {editandoId ? "Guardar cambios" : "Crear profe"}
+      </button>
       </form>
 
       <ul>
         {profes.map((a) => (
           <li key={a.id}>
             {a.nombre} (Disciplina {a.disciplina})
-            <button onClick={() => handleDelete(a.id)}>
-              Eliminar
-            </button>
+            <button onClick={() => handleEdit(a)}>Editar</button>
+            <button onClick={() => handleDelete(a.id)}>Eliminar</button>
           </li>
         ))}
       </ul>
