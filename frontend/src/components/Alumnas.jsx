@@ -90,7 +90,7 @@ export default function Alumnas() {
           setModalOpen(true);
         }}
       >
-        Nueva Alumna
+        Crear Alumna
       </button>
 
       <ul>

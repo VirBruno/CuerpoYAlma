@@ -6,6 +6,7 @@ import {
   deleteClase,
 } from "../services/clases";
 import { getProfes } from "../services/profes";
+import Modal from "../components/Modal";
 
 export default function Clases() {
   const [clases, setClases] = useState([]);
@@ -17,8 +18,19 @@ export default function Clases() {
   const [profeId, setProfeId] = useState("");
   const [cantidadAlumnas, setCantidadAlumnas] = useState(0);
   const [profes, setProfes] = useState([]);
-
+  const [modalOpen, setModalOpen] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
+
+  const limpiarFormulario = () => {
+      // reset
+    setEditandoId(null);
+    setDisciplina("");
+    setDia("");
+    setHora("");
+    setNivel("");
+    setProfeId("");
+    setCantidadAlumnas(0);
+  };
 
   const DISCIPLINAS = [
   "Pole fijo",
@@ -80,15 +92,8 @@ const DIA = [
       await createClase(payload);
     }
 
-    // reset
-    setEditandoId(null);
-    setDisciplina("");
-    setDia("");
-    setHora("");
-    setNivel("");
-    setProfeId("");
-    setCantidadAlumnas(0);
-
+    limpiarFormulario();
+    setModalOpen(false);
     cargarClases();
   };
 
@@ -100,6 +105,7 @@ const DIA = [
     setNivel(clase.nivel || "");
     setProfeId(clase.profe_id);
     setCantidadAlumnas(clase.cantidad_alumnas);
+    setModalOpen(true);
   };
 
   const handleDelete = async (id) => {
@@ -111,87 +117,105 @@ const DIA = [
     <div>
       <h2>Clases</h2>
 
-      <form onSubmit={handleSubmit}>
-        <select
-          value={disciplina}
-          onChange={(e) => setDisciplina(e.target.value)}
-          required
-        >
-          <option value="">Seleccionar disciplina</option>
-          {DISCIPLINAS.map((d) => (
-            <option key={d} value={d}>
-              {d}
-            </option>
-          ))}
-        </select>
+    <button
+            onClick={() => {
+              limpiarFormulario();
+              setModalOpen(true);
+            }}
+          >
+            Crear Clase
+          </button>
+    
+            <ul>
+              {clases.map((c) => (
+                <li key={c.id}>
+                  {c.disciplina} – {c.dia} – {c.hora} – alumnas: {c.cantidad_alumnas}
+                  <button onClick={() => handleEdit(c)}>Editar</button>
+                  <button onClick={() => handleDelete(c.id)}>Eliminar</button>
+                </li>
+              ))}
+            </ul>
+    
+          <Modal
+            isOpen={modalOpen}
+            onClose={() => {
+              setModalOpen(false);
+              limpiarFormulario();
+            }}
+            title={editandoId ? "Editar Clase" : "Crear Clase"} 
+          >
+                        <form onSubmit={handleSubmit}>
+              <select
+                value={disciplina}
+                onChange={(e) => setDisciplina(e.target.value)}
+                required
+              >
+                <option value="">Seleccionar disciplina</option>
+                {DISCIPLINAS.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
 
-        <select
-          value={dia}
-          onChange={(e) => setDia(e.target.value)}
-          required
-        >
-          <option value="">Seleccionar día</option>
-          {DIA.map((d) => (
-            <option key={d} value={d}>
-              {d}
-            </option>
-          ))}
-        </select>
+              <select
+                value={dia}
+                onChange={(e) => setDia(e.target.value)}
+                required
+              >
+                <option value="">Seleccionar día</option>
+                {DIA.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
 
-        <input
-          placeholder="Hora (HH:MM)"
-          value={hora}
-          onChange={(e) => setHora(e.target.value)}
-          required
-        />
+              <input
+                placeholder="Hora (HH:MM)"
+                value={hora}
+                onChange={(e) => setHora(e.target.value)}
+                required
+              />
 
-        <select
-          value={nivel}
-          onChange={(e) => setNivel(e.target.value)}
-          required
-        >
-          <option value="">Seleccionar nivel</option>
-          {NIVEL.map((d) => (
-            <option key={d} value={d}>
-              {d}
-            </option>
-          ))}
-        </select>
+              <select
+                value={nivel}
+                onChange={(e) => setNivel(e.target.value)}
+                required
+              >
+                <option value="">Seleccionar nivel</option>
+                {NIVEL.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
 
-<select
-          value={profeId}
-          onChange={(e) => setProfeId(e.target.value)}
-          required
-        >
-          <option value="">Seleccionar profe</option>
-          {profes.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.nombre}
-            </option>
-          ))}
-        </select>
+              <select
+                value={profeId}
+                onChange={(e) => setProfeId(e.target.value)}
+                required
+              >
+                <option value="">Seleccionar profe</option>
+                {profes.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.nombre}
+                  </option>
+                ))}
+              </select>
 
-        <input
-          type="number"
-          placeholder="Cantidad alumnas"
-          value={cantidadAlumnas}
-          onChange={(e) => setCantidadAlumnas(e.target.value)}
-        />
+              <input
+                type="number"
+                placeholder="Cantidad alumnas"
+                value={cantidadAlumnas}
+                onChange={(e) => setCantidadAlumnas(e.target.value)}
+              />
 
-        <button type="submit">
-          {editandoId ? "Guardar cambios" : "Crear clase"}
-        </button>
-      </form>
-
-      <ul>
-        {clases.map((c) => (
-          <li key={c.id}>
-            {c.disciplina} – {c.dia} – {c.hora} – alumnas: {c.cantidad_alumnas}
-            <button onClick={() => handleEdit(c)}>Editar</button>
-            <button onClick={() => handleDelete(c.id)}>Eliminar</button>
-          </li>
-        ))}
-      </ul>
+              <button type="submit">
+                {editandoId ? "Guardar cambios" : "Crear clase"}
+              </button>
+            </form>
+          </Modal>
     </div>
   );
 }
