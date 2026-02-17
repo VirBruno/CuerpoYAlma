@@ -6,18 +6,29 @@ import {
   updateAbono,
 } from "../services/abonos";
 import { getAlumnas } from "../services/alumnas";
+import Modal from "../components/Modal";
 
 export default function Abonos() {
   const [editandoId, setEditandoId] = useState(null);
   const [abonos, setAbonos] = useState([]);
   const [alumnas, setAlumnas] = useState([]);
-
+  const [modalOpen, setModalOpen] = useState(false);
   const [alumnaId, setAlumnaId] = useState("");
   const [mes, setMes] = useState("");
   const [clasesIncluidas, setClasesIncluidas] = useState("");
   const [clasesUsadas, setClasesUsadas] = useState("");
   const [clasesRecuperadas, setClasesRecuperadas] = useState("");
   const [fechaPago, setFechaPago] = useState("");
+
+  const limpiarFormulario = () => {
+    setEditandoId(null);
+    setAlumnaId("");
+    setMes("");
+    setClasesIncluidas("");
+    setClasesUsadas("");
+    setClasesRecuperadas("");
+    setFechaPago("");
+  };
 
 const cargarAlumnas = async () => {
   try {
@@ -54,20 +65,16 @@ useEffect(() => {
       fecha_pago: fechaPago || null,
     };
 
+    console.log("ABONO PAYLOAD:", payload);
+
     if (editandoId) {
       await updateAbono(editandoId, payload);
     } else {
       await createAbono(payload);
     }
 
-    setEditandoId(null);
-    setAlumnaId("");
-    setMes("");
-    setClasesIncluidas("");
-    setClasesUsadas("");
-    setClasesRecuperadas("");
-    setFechaPago("");
-
+    limpiarFormulario();
+    setModalOpen(false);
     cargarAbonos();
   };
 
@@ -79,6 +86,7 @@ useEffect(() => {
     setClasesUsadas(abono.clases_usadas);
     setClasesRecuperadas(abono.clases_recuperadas);
     setFechaPago(abono.fecha_pago);
+    setModalOpen(true);
   };
 
   const handleDelete = async (id) => {
@@ -89,41 +97,59 @@ useEffect(() => {
   return (
     <div>
       <h2>Abonos</h2>
-      <form onSubmit={handleSubmit}>
-        <p>Total alumnas: {alumnas.length}</p>
-        <select
-          value={alumnaId}
-          onChange={(e) => setAlumnaId(e.target.value)}
-          required
-        >
-          <option value="">Seleccionar alumna</option>
-          {alumnas.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.nombre}
-            </option>
-          ))}
-        </select>
+      <button
+              onClick={() => {
+                limpiarFormulario();
+                setModalOpen(true);
+              }}
+            >
+              Crear Abono
+            </button>
+      
+            <ul>
+              {abonos.map((a) => (
+                <li key={a.id}>
+                  Alumna #{a.alumna_id} – {a.mes}
+                  <button onClick={() => handleEdit(a)}>Editar</button>
+                  <button onClick={() => handleDelete(a.id)}>Eliminar</button>
+                </li>
+              ))}
+            </ul>
+      
+            <Modal
+              isOpen={modalOpen}
+              onClose={() => {
+                setModalOpen(false);
+                limpiarFormulario();
+              }}
+              title={editandoId ? "Editar Abono" : "Crear Abono"}
+            >
+              <form onSubmit={handleSubmit}>
+                <p>Total alumnas: {alumnas.length}</p>
+                <select
+                  value={alumnaId}
+                  onChange={(e) => setAlumnaId(e.target.value)}
+                  required
+                >
+                  <option value="">Seleccionar alumna</option>
+                  {alumnas.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.nombre}
+                    </option>
+                  ))}
+                </select>
 
-        <input type="number" value={mes} onChange={(e) => setMes(e.target.value)} placeholder="Mes" />
-        <input type="number" value={clasesIncluidas} onChange={(e) => setClasesIncluidas(e.target.value)} placeholder="Clases Incluidas" />
-        <input type="number" value={clasesUsadas} onChange={(e) => setClasesUsadas(e.target.value)} placeholder="Clases Usadas" />
-        <input type="number" value={clasesRecuperadas} onChange={(e) => setClasesRecuperadas(e.target.value)} placeholder="Clases Recuperadas" />
-        <input type="date" value={fechaPago} onChange={(e) => setFechaPago(e.target.value)} placeholder="Fecha Pago" />
+                <input type="number" value={mes} onChange={(e) => setMes(e.target.value)} placeholder="Mes" />
+                <input type="number" value={clasesIncluidas} onChange={(e) => setClasesIncluidas(e.target.value)} placeholder="Clases Incluidas" />
+                <input type="number" value={clasesUsadas} onChange={(e) => setClasesUsadas(e.target.value)} placeholder="Clases Usadas" />
+                <input type="number" value={clasesRecuperadas} onChange={(e) => setClasesRecuperadas(e.target.value)} placeholder="Clases Recuperadas" />
+                <input type="date" value={fechaPago} onChange={(e) => setFechaPago(e.target.value)} placeholder="Fecha Pago" />
 
-        <button type="submit">
-          {editandoId ? "Guardar cambios" : "Crear abono"}
-        </button>
-      </form>
-
-      <ul>
-        {abonos.map((a) => (
-          <li key={a.id}>
-            Alumna #{a.alumna_id} – {a.mes}
-            <button onClick={() => handleEdit(a)}>Editar</button>
-            <button onClick={() => handleDelete(a.id)}>Eliminar</button>
-          </li>
-        ))}
-      </ul>
+                <button type="submit">
+                  {editandoId ? "Guardar cambios" : "Crear abono"}
+                </button>
+              </form>
+            </Modal>
     </div>
   );
 }

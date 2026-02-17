@@ -60,7 +60,6 @@ class ClaseResponse(ClaseBase):
         from_attributes = True
 
 class AbonoBase(BaseModel):
-    id: int
     alumna_id: int
     mes: int
     clases_incluidas: int
@@ -69,14 +68,7 @@ class AbonoBase(BaseModel):
     fecha_pago: date
 
 class AbonoCreate(AbonoBase):
-    id: int
-    alumna_id: int
-    mes: int
-    clases_incluidas: int
-    clases_usadas: int
-    clases_recuperadas: int
-    fecha_pago: date
-
+    pass
 
 class AbonoUpdate(BaseModel):
     alumna_id: int | None = None
