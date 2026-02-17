@@ -123,6 +123,9 @@ class ReservaClaseResponse(ReservaClaseBase):
 class ReservaClaseUpdate(ReservaClaseBase):
     pass
 
+class ReservaMasivaCreate(ReservaClaseBase):
+    pass
+
 
 class SeguroBase(BaseModel):
     numero: int

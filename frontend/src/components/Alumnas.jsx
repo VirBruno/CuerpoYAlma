@@ -6,6 +6,7 @@ import {
   updateAlumna,
 } from "../services/alumnas";
 import { getSeguros } from "../services/seguros";
+import Modal from "../components/Modal";
 
 export default function Alumnas() {
   const [alumnas, setAlumnas] = useState([]);
@@ -14,7 +15,7 @@ export default function Alumnas() {
   const [dni, setDni] = useState("");
   const [seguroId, setSeguroId] = useState("");
   const [seguros, setSeguros] = useState([]);
-
+  const [modalOpen, setModalOpen] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
 
   const cargarAlumnas = async () => {
@@ -23,18 +24,26 @@ export default function Alumnas() {
   };
 
   const cargarSeguros = async () => {
-  try {
-    const res = await getSeguros();
-    setSeguros(res.data);
-  } catch (e) {
-    console.error("Error cargando seguros", e);
-  }
-};
+    try {
+      const res = await getSeguros();
+      setSeguros(res.data);
+    } catch (e) {
+      console.error("Error cargando seguros", e);
+    }
+  };
 
   useEffect(() => {
     cargarAlumnas();
     cargarSeguros();
   }, []);
+
+  const limpiarFormulario = () => {
+    setNombre("");
+    setEdad("");
+    setDni("");
+    setSeguroId("");
+    setEditandoId(null);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -46,28 +55,26 @@ export default function Alumnas() {
       seguro_id: Number(seguroId),
     };
 
-    
     if (editandoId) {
       await updateAlumna(editandoId, payload);
     } else {
       await createAlumna(payload);
     }
 
-    setNombre("");
-    setEdad("");
-    setDni("");
-    setSeguroId("");
-
+    limpiarFormulario();
+    setModalOpen(false);
     cargarAlumnas();
   };
 
-    const handleEdit = (alumna) => {
+  const handleEdit = (alumna) => {
     setEditandoId(alumna.id);
     setNombre(alumna.nombre);
     setEdad(alumna.edad);
+    setDni(alumna.dni);
     setSeguroId(alumna.seguro_id);
+    setModalOpen(true);
   };
-  
+
   const handleDelete = async (id) => {
     await deleteAlumna(id);
     cargarAlumnas();
@@ -77,43 +84,14 @@ export default function Alumnas() {
     <div>
       <h2>Alumnas</h2>
 
-      <form onSubmit={handleSubmit}>
-        <input
-          placeholder="Nombre"
-          value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
-          required
-        />
-        <input
-          placeholder="Edad"
-          type="number"
-          value={edad}
-          onChange={(e) => setEdad(e.target.value)}
-          required
-        />
-        <input
-          placeholder="DNI"
-          value={dni}
-          onChange={(e) => setDni(e.target.value)}
-          required
-        />
-        <select
-          value={seguroId}
-          onChange={(e) => setSeguroId(e.target.value)}
-          required
-        >
-          <option value="">Seleccionar seguro</option>
-          {seguros.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.numero}
-            </option>
-          ))}
-        </select>
-
-      <button type="submit">
-        {editandoId ? "Guardar cambios" : "Crear alumna"}
+      <button
+        onClick={() => {
+          limpiarFormulario();
+          setModalOpen(true);
+        }}
+      >
+        Nueva Alumna
       </button>
-      </form>
 
       <ul>
         {alumnas.map((a) => (
@@ -124,6 +102,56 @@ export default function Alumnas() {
           </li>
         ))}
       </ul>
+
+      <Modal
+        isOpen={modalOpen}
+        onClose={() => {
+          setModalOpen(false);
+          limpiarFormulario();
+        }}
+        title={editandoId ? "Editar Alumna" : "Crear Alumna"}
+      >
+        <form onSubmit={handleSubmit}>
+          <input
+            placeholder="Nombre"
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            required
+          />
+
+          <input
+            placeholder="Edad"
+            type="number"
+            value={edad}
+            onChange={(e) => setEdad(e.target.value)}
+            required
+          />
+
+          <input
+            placeholder="DNI"
+            value={dni}
+            onChange={(e) => setDni(e.target.value)}
+            required
+          />
+
+          <select
+            value={seguroId}
+            onChange={(e) => setSeguroId(e.target.value)}
+            required
+          >
+            <option value="">Seleccionar seguro</option>
+            {seguros.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.numero}
+              </option>
+            ))}
+          </select>
+
+          <button type="submit">
+            {editandoId ? "Actualizar" : "Crear"}
+          </button>
+        </form>
+      </Modal>
     </div>
   );
 }

@@ -101,6 +101,7 @@ class ReservaClase(Base):
         String,
         nullable=False,
         default="RESERVADA"
+        
         # RESERVADA | CANCELADA_A_TIEMPO | ASISTIO | NO_ASISTIO | RECUPERADA
     )
 

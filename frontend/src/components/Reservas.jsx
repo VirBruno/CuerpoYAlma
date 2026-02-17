@@ -7,11 +7,15 @@ import {
 } from "../services/reservas";
 import { getAlumnas } from "../services/alumnas";
 import { getClases } from "../services/clases";
+import Modal from "../components/Modal";
+import api from "../api";
+
 
 export default function Reserva() {
   const [reservas, setReservas] = useState([]);
   const [alumnas, setAlumnas] = useState([]);
   const [clases, setClases] = useState([]);
+  const [modalOpen, setModalOpen] = useState(false);
 
   const [alumnaId, setAlumnaId] = useState("");
   const [claseId, setClaseId] = useState("");
@@ -19,6 +23,8 @@ export default function Reserva() {
   const [esRecuperacion, setEsRecuperacion] = useState(false);
 
   const [editandoId, setEditandoId] = useState(null);
+
+  const [cupoInfo, setCupoInfo] = useState(null);
 
   const cargarTodo = async () => {
     const [r, a, c] = await Promise.all([
@@ -31,6 +37,16 @@ export default function Reserva() {
     setAlumnas(a.data);
     setClases(c.data);
   };
+
+  // reset total
+  const limpiarFormulario = () => {
+  setEditandoId(null);
+  setAlumnaId("");
+  setClaseId("");
+  setFechaClase("");
+  setEsRecuperacion(false);
+  };
+
 useEffect(() => {
   console.log("ALUMNAS RAW:", alumnas);
 }, [alumnas]);
@@ -45,7 +61,7 @@ const handleSubmit = async (e) => {
   const payload = {
     alumna_id: Number(alumnaId),
     clase_id: Number(claseId),
-    fecha_clase: new Date(fechaClase).toISOString(),
+    fecha_clase: fechaClase, // mejor así si backend usa date
     es_recuperacion: esRecuperacion,
   };
 
@@ -55,15 +71,20 @@ const handleSubmit = async (e) => {
     await createReserva(payload);
   }
 
-  // reset total
-  setEditandoId(null);
-  setAlumnaId("");
-  setClaseId("");
-  setFechaClase("");
-  setEsRecuperacion(false);
-
+  limpiarFormulario();
+  setModalOpen(false);
   cargarTodo();
 };
+
+useEffect(() => {
+  if (claseId && fechaClase) {
+    api
+      .get("/reservas/cupo", {
+        params: { clase_id: claseId, fecha: fechaClase },
+      })
+      .then((res) => setCupoInfo(res.data));
+  }
+}, [claseId, fechaClase]);
 
 
 const handleEdit = (reserva) => {
@@ -72,6 +93,7 @@ const handleEdit = (reserva) => {
     setClaseId(reserva.clase_id);
     setFechaClase(reserva.fecha_clase.slice(0, 16));
     setEsRecuperacion(reserva.es_recuperacion);
+    setModalOpen(true);
   };
 
 const handleDelete = async (id) => {
@@ -92,7 +114,35 @@ const handleDelete = async (id) => {
     <div>
       <h2>Reservas</h2>
 
-      <form onSubmit={handleSubmit}>
+      <button
+        onClick={() => {
+          limpiarFormulario();
+          setModalOpen(true);
+        }}
+      >
+        Crear Reserva
+      </button>
+
+      <ul>
+        {reservas.map((r) => (
+          <li key={r.id}>
+            Alumna #{r.alumna_id} – Clase #{r.clase_id} –{" "}
+            {new Date(r.fecha_clase).toLocaleString()} – {r.estado}
+            <button onClick={() => handleEdit(r)}>Editar</button>
+            <button onClick={() => handleDelete(r.id)}>Eliminar</button>
+          </li>
+        ))}
+      </ul>
+
+      <Modal
+        isOpen={modalOpen}
+        onClose={() => {
+          setModalOpen(false);
+          limpiarFormulario();
+        }}
+        title={editandoId ? "Editar Reserva" : "Crear Reserva"}
+      >
+              <form onSubmit={handleSubmit}>
         {/* ALUMNA */}
         <select
           value={alumnaId}
@@ -131,6 +181,12 @@ const handleDelete = async (id) => {
           required
         />
 
+        {cupoInfo && (
+          <p>
+            Cupo disponible: {cupoInfo.disponibles} / {cupoInfo.cupo_total}
+          </p>
+        )}
+
         {/* RECUPERACIÓN */}
         <label>
           <input
@@ -141,20 +197,16 @@ const handleDelete = async (id) => {
           Es recuperación
         </label>
 
-        <button type="submit">  {editandoId ? "Guardar cambios" : "Crear reserva"}
-        </button>
-      </form>
+  <button
+    type="submit"
+    disabled={cupoInfo && cupoInfo.disponibles <= 0}
+  >
+    Reservar
+  </button>
 
-      <ul>
-        {reservas.map((r) => (
-          <li key={r.id}>
-            Alumna #{r.alumna_id} – Clase #{r.clase_id} –{" "}
-            {new Date(r.fecha_clase).toLocaleString()} – {r.estado}
-            <button onClick={() => handleEdit(r)}>Editar</button>
-            <button onClick={() => handleDelete(r.id)}>Eliminar</button>
-          </li>
-        ))}
-      </ul>
+      </form>
+      </Modal>
+
     </div>
   );
 }
