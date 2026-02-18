@@ -5,13 +5,19 @@ import {
   deleteProfe,
   updateProfe,
 } from "../services/profes";
+import Modal from "../components/Modal";
 
 export default function Profes() {
   const [profes, setProfes] = useState([]);
   const [nombre, setNombre] = useState("");
   const [disciplina, setDisciplina] = useState("");
-
+  const [modalOpen, setModalOpen] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
+
+  const limpiarFormulario = () => {
+    setNombre("");
+    setDisciplina("");
+    };
 
   const DISCIPLINAS = [
   "Pole fijo",
@@ -45,10 +51,8 @@ export default function Profes() {
     } else {
       await createProfe(payload);
     }
-
-    setNombre("");
-    setDisciplina("");
-
+    limpiarFormulario();
+    setModalOpen(false);
     cargarProfes();
   };
 
@@ -56,6 +60,7 @@ export default function Profes() {
     setEditandoId(profe.id);
     setNombre(profe.nombre);
     setDisciplina(profe.disciplina);
+    setModalOpen(true);
   };
 
   const handleDelete = async (id) => {
@@ -66,7 +71,32 @@ export default function Profes() {
   return (
     <div>
       <h2>Profes</h2>
+      <button
+        onClick={() => {
+          limpiarFormulario();
+          setModalOpen(true);
+        }}
+      >
+        Crear Profe
+      </button>
+      <ul>
+        {profes.map((a) => (
+          <li key={a.id}>
+            {a.nombre} (Disciplina {a.disciplina})
+            <button onClick={() => handleEdit(a)}>Editar</button>
+            <button onClick={() => handleDelete(a.id)}>Eliminar</button>
+          </li>
+        ))}
+      </ul>
 
+      <Modal
+        isOpen={modalOpen}
+        onClose={() => {
+          setModalOpen(false);
+          limpiarFormulario();
+        }}
+        title={editandoId ? "Editar Alumna" : "Crear Alumna"}
+      >
       <form onSubmit={handleSubmit}>
         <input
           placeholder="Nombre"
@@ -91,16 +121,7 @@ export default function Profes() {
         {editandoId ? "Guardar cambios" : "Crear profe"}
       </button>
       </form>
-
-      <ul>
-        {profes.map((a) => (
-          <li key={a.id}>
-            {a.nombre} (Disciplina {a.disciplina})
-            <button onClick={() => handleEdit(a)}>Editar</button>
-            <button onClick={() => handleDelete(a.id)}>Eliminar</button>
-          </li>
-        ))}
-      </ul>
+      </Modal>
     </div>
   );
 }
