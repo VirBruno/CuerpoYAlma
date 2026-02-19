@@ -1,16 +1,10 @@
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --violeta-oscuro: #2E0F3A;
+  --violeta-principal: #7B2CBF;
+  --violeta-claro: #C77DFF;
+  --fondo: #F8F6FB;
+  --blanco: #FFFFFF;
+  --rojo-cerrar: #C1121F;
 }
 
 a {
@@ -24,10 +18,9 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  font-family: 'Playfair Display', serif;
+  background: linear-gradient(135deg, #2E0F3A, #7B2CBF);
+  color: white;
 }
 
 h1 {
@@ -36,19 +29,19 @@ h1 {
 }
 
 button {
+  background-color: var(--violeta-principal);
+  border: none;
+  padding: 8px 14px;
   border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
+  color: white;
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: 0.3s;
 }
+
 button:hover {
-  border-color: #646cff;
+  background-color: var(--violeta-claro);
 }
+
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
@@ -70,19 +63,53 @@ button:focus-visible {
 
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.5);
+  inset: 0;
+  background: rgba(0,0,0,0.6);
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-.modal-content {
+.modal {
   background: white;
-  padding: 2rem;
-  border-radius: 10px;
-  width: 500px;
+  color: black;
+  padding: 30px;
+  border-radius: 12px;
+  width: 400px;
+  position: relative;
+}
+
+.modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: var(--rojo-cerrar);
+  color: white;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  padding: 15px 30px;
+  background-color: var(--violeta-oscuro);
 }

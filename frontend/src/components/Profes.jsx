@@ -95,15 +95,18 @@ export default function Profes() {
           setModalOpen(false);
           limpiarFormulario();
         }}
-        title={editandoId ? "Editar Alumna" : "Crear Alumna"}
+        title={editandoId ? "Editar Profe" : "Crear Profe"}
       >
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="form">
+      <div className="form-group"> 
         <input
           placeholder="Nombre"
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
           required
         />
+      </div>
+      <div className="form-group"> 
         <select
           value={disciplina}
           onChange={(e) => setDisciplina(e.target.value)}
@@ -116,7 +119,7 @@ export default function Profes() {
             </option>
           ))}
         </select>
-
+      </div>
       <button type="submit">
         {editandoId ? "Guardar cambios" : "Crear profe"}
       </button>

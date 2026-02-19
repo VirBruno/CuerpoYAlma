@@ -92,9 +92,10 @@ const handleEdit = (seguro) => {
                 setModalOpen(false);
                 limpiarFormulario();
               }}
-              title={editandoId ? "Editar Alumna" : "Crear Alumna"}
+              title={editandoId ? "Editar Seguro" : "Crear Seguro"}
             >
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit} className="form"> 
+              <div className="form-group"> 
                 <input
                   placeholder="Número"
                   type="number"
@@ -102,19 +103,23 @@ const handleEdit = (seguro) => {
                   onChange={(e) => setNumero(e.target.value)}
                   required
                 />
+              </div>
+              <div className="form-group"> 
                 <input
                   type="date"
                   value={fechaPago}
                   onChange={(e) => setFechaPago(e.target.value)}
                   required
-                />        
+                />   
+              </div>
+              <div className="form-group">                      
                 <input
                   type="date"
                   value={fechaVigencia}
                   onChange={(e) => setFechaVigencia(e.target.value)}
                   required
                 />
-
+              </div>
                 <button type="submit">
                   {editandoId ? "Guardar cambios" : "Crear seguro"}
                 </button>

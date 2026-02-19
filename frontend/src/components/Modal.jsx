@@ -3,11 +3,13 @@ export default function Modal({ isOpen, onClose, children, title }) {
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content">
-        <div className="modal-header">
-          <h3>{title}</h3>
-          <button onClick={onClose}>X</button>
-        </div>
+      <div className="modal">
+        <button className="modal-close" onClick={onClose}>
+          ×
+        </button>
+
+        <h2>{title}</h2>
+
         {children}
       </div>
     </div>

@@ -111,14 +111,16 @@ export default function Alumnas() {
         }}
         title={editandoId ? "Editar Alumna" : "Crear Alumna"}
       >
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="form">
+          <div className="form-group">
           <input
             placeholder="Nombre"
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
             required
           />
-
+          </div>
+          <div className="form-group">
           <input
             placeholder="Edad"
             type="number"
@@ -126,14 +128,16 @@ export default function Alumnas() {
             onChange={(e) => setEdad(e.target.value)}
             required
           />
-
+          </div>
+          <div className="form-group">
           <input
             placeholder="DNI"
             value={dni}
             onChange={(e) => setDni(e.target.value)}
             required
           />
-
+          </div>
+          <div className="form-group">
           <select
             value={seguroId}
             onChange={(e) => setSeguroId(e.target.value)}
@@ -146,7 +150,7 @@ export default function Alumnas() {
               </option>
             ))}
           </select>
-
+          </div>
           <button type="submit">
             {editandoId ? "Actualizar" : "Crear"}
           </button>

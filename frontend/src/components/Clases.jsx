@@ -144,7 +144,8 @@ const DIA = [
             }}
             title={editandoId ? "Editar Clase" : "Crear Clase"} 
           >
-                        <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} className="form">
+            <div className="form-group">              
               <select
                 value={disciplina}
                 onChange={(e) => setDisciplina(e.target.value)}
@@ -157,7 +158,8 @@ const DIA = [
                   </option>
                 ))}
               </select>
-
+            </div>
+            <div className="form-group">   
               <select
                 value={dia}
                 onChange={(e) => setDia(e.target.value)}
@@ -170,14 +172,16 @@ const DIA = [
                   </option>
                 ))}
               </select>
-
+            </div>
+            <div className="form-group"> 
               <input
                 placeholder="Hora (HH:MM)"
                 value={hora}
                 onChange={(e) => setHora(e.target.value)}
                 required
               />
-
+            </div>
+            <div className="form-group"> 
               <select
                 value={nivel}
                 onChange={(e) => setNivel(e.target.value)}
@@ -190,7 +194,8 @@ const DIA = [
                   </option>
                 ))}
               </select>
-
+            </div>
+            <div className="form-group"> 
               <select
                 value={profeId}
                 onChange={(e) => setProfeId(e.target.value)}
@@ -203,14 +208,15 @@ const DIA = [
                   </option>
                 ))}
               </select>
-
+            </div>
+            <div className="form-group"> 
               <input
                 type="number"
                 placeholder="Cantidad alumnas"
                 value={cantidadAlumnas}
                 onChange={(e) => setCantidadAlumnas(e.target.value)}
               />
-
+            </div>
               <button type="submit">
                 {editandoId ? "Guardar cambios" : "Crear clase"}
               </button>

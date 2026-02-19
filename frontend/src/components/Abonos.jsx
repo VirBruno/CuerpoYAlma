@@ -124,13 +124,14 @@ useEffect(() => {
               }}
               title={editandoId ? "Editar Abono" : "Crear Abono"}
             >
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit} className="form">
                 <p>Total alumnas: {alumnas.length}</p>
+                <div className="form-group"> 
                 <select
                   value={alumnaId}
                   onChange={(e) => setAlumnaId(e.target.value)}
                   required
-                >
+                >               
                   <option value="">Seleccionar alumna</option>
                   {alumnas.map((a) => (
                     <option key={a.id} value={a.id}>
@@ -138,12 +139,22 @@ useEffect(() => {
                     </option>
                   ))}
                 </select>
-
+                </div>
+                <div className="form-group"> 
                 <input type="number" value={mes} onChange={(e) => setMes(e.target.value)} placeholder="Mes" />
+                </div>
+                <div className="form-group">                 
                 <input type="number" value={clasesIncluidas} onChange={(e) => setClasesIncluidas(e.target.value)} placeholder="Clases Incluidas" />
+                </div>
+                <div className="form-group"> 
                 <input type="number" value={clasesUsadas} onChange={(e) => setClasesUsadas(e.target.value)} placeholder="Clases Usadas" />
+                </div>
+                <div className="form-group"> 
                 <input type="number" value={clasesRecuperadas} onChange={(e) => setClasesRecuperadas(e.target.value)} placeholder="Clases Recuperadas" />
+                </div>
+                <div className="form-group"> 
                 <input type="date" value={fechaPago} onChange={(e) => setFechaPago(e.target.value)} placeholder="Fecha Pago" />
+                </div>
 
                 <button type="submit">
                   {editandoId ? "Guardar cambios" : "Crear abono"}

@@ -142,8 +142,9 @@ const handleDelete = async (id) => {
         }}
         title={editandoId ? "Editar Reserva" : "Crear Reserva"}
       >
-              <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="form">
         {/* ALUMNA */}
+      <div className="form-group"> 
         <select
           value={alumnaId}
           onChange={(e) => setAlumnaId(e.target.value)}
@@ -156,9 +157,8 @@ const handleDelete = async (id) => {
             </option>
           ))}
         </select>
-
-
-
+      </div>
+      <div className="form-group"> 
         {/* CLASE */}
         <select
           value={claseId}
@@ -172,7 +172,8 @@ const handleDelete = async (id) => {
             </option>
           ))}
         </select>
-
+      </div>
+      <div className="form-group"> 
         {/* FECHA */}
         <input
           type="date"
@@ -180,7 +181,8 @@ const handleDelete = async (id) => {
           onChange={(e) => setFechaClase(e.target.value)}
           required
         />
-
+      </div>
+      <div className="form-group"> 
         {cupoInfo && (
           <p>
             Cupo disponible: {cupoInfo.disponibles} / {cupoInfo.cupo_total}
@@ -196,12 +198,13 @@ const handleDelete = async (id) => {
           />
           Es recuperación
         </label>
+      </div>
 
   <button
     type="submit"
     disabled={cupoInfo && cupoInfo.disponibles <= 0}
   >
-    Reservar
+    Crear Reserva
   </button>
 
       </form>
