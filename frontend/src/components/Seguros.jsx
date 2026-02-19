@@ -5,19 +5,26 @@ import {
   deleteSeguro,
   updateSeguro,
 } from "../services/seguros";
+import Modal from "../components/Modal";
 
 export default function Seguros() {
   const [seguros, setSeguros] = useState([]);
   const [numero, setNumero] = useState("");
   const [fechaVigencia, setFechaVigencia] = useState("");
   const [fechaPago, setFechaPago] = useState("");
-
+  const [modalOpen, setModalOpen] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
 
   const cargarSeguros = async () => {
     const res = await getSeguros();
     setSeguros(res.data);
   };
+
+  const limpiarFormulario = () => {
+    setNumero("");
+    setFechaPago("");
+    setFechaVigencia("");
+   };
 
   useEffect(() => {
     cargarSeguros();
@@ -38,10 +45,8 @@ const handleSubmit = async (e) => {
     await createSeguro(payload);
   }
 
-  setNumero("");
-  setFechaPago("");
-  setFechaVigencia("");
-
+  limpiarFormulario();
+  setModalOpen(false);
   cargarSeguros();
 };
 
@@ -51,6 +56,7 @@ const handleEdit = (seguro) => {
     setNumero(seguro.numero);
     setFechaPago(seguro.fecha_pago);
     setFechaVigencia(seguro.fecha_vigencia);
+    setModalOpen(true);    
   };
 
   const handleDelete = async (id) => {
@@ -61,33 +67,15 @@ const handleEdit = (seguro) => {
   return (
     <div>
       <h2>Seguros</h2>
-      <form onSubmit={handleSubmit}>
-        <input
-          placeholder="Número"
-          type="number"
-          value={numero}
-          onChange={(e) => setNumero(e.target.value)}
-          required
-        />
-        <input
-          type="date"
-          value={fechaPago}
-          onChange={(e) => setFechaPago(e.target.value)}
-          required
-        />        
-        <input
-          type="date"
-          value={fechaVigencia}
-          onChange={(e) => setFechaVigencia(e.target.value)}
-          required
-        />
-
-        <button type="submit">
-          {editandoId ? "Guardar cambios" : "Crear seguro"}
-        </button>
-
-      </form>
-
+            <button
+              onClick={() => {
+                limpiarFormulario();
+                setModalOpen(true);
+              }}
+            >
+              Crear Seguro
+            </button>
+      
       <ul>
         {seguros.map((a) => (
           <li key={a.id}>
@@ -97,6 +85,42 @@ const handleEdit = (seguro) => {
           </li>
         ))}
       </ul>
+      
+            <Modal
+              isOpen={modalOpen}
+              onClose={() => {
+                setModalOpen(false);
+                limpiarFormulario();
+              }}
+              title={editandoId ? "Editar Alumna" : "Crear Alumna"}
+            >
+              <form onSubmit={handleSubmit}>
+                <input
+                  placeholder="Número"
+                  type="number"
+                  value={numero}
+                  onChange={(e) => setNumero(e.target.value)}
+                  required
+                />
+                <input
+                  type="date"
+                  value={fechaPago}
+                  onChange={(e) => setFechaPago(e.target.value)}
+                  required
+                />        
+                <input
+                  type="date"
+                  value={fechaVigencia}
+                  onChange={(e) => setFechaVigencia(e.target.value)}
+                  required
+                />
+
+                <button type="submit">
+                  {editandoId ? "Guardar cambios" : "Crear seguro"}
+                </button>
+
+              </form>
+            </Modal>
     </div>
   );
 }
