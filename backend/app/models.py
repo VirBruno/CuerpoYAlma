@@ -77,6 +77,7 @@ class Abono(Base):
     alumna_id = Column(Integer, ForeignKey("alumnas.id"), nullable=False)
 
     mes = Column(Integer, nullable=False)  # ej: "2026-01"
+    año = Column(Integer, nullable=False)
     clases_incluidas = Column(Integer, default=8)
     clases_usadas = Column(Integer, default=0)
     clases_recuperadas = Column(Integer, default=0)
@@ -101,7 +102,7 @@ class ReservaClase(Base):
         String,
         nullable=False,
         default="RESERVADA"
-        
+
         # RESERVADA | CANCELADA_A_TIEMPO | ASISTIO | NO_ASISTIO | RECUPERADA
     )
 

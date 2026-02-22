@@ -1,12 +1,13 @@
 import api from "../api"; // tu api.js con axios.create
+import client from "../client";
 
-export const getAlumnas = () => api.get("/alumnas");
+export const getAlumnas = () => client.get("/alumnas");
 
 export const createAlumna = (data) =>
-  api.post("/alumnas", data);
+  client.post("/alumnas", data);
 
 export const updateAlumna = (id, data) =>
-  api.put(`/alumnas/${id}`, data);
+  client.put(`/alumnas/${id}`, data);
 
 export const deleteAlumna = (id) =>
-  api.delete(`/alumnas/${id}`);
+  client.delete(`/alumnas/${id}`);

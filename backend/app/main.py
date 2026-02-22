@@ -4,6 +4,8 @@ from sqlalchemy import extract
 from datetime import datetime, timedelta,date
 import calendar
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import func
+
 
 from app.database import engine, Base, get_db
 from app import models
@@ -244,14 +246,14 @@ def eliminar_clase(clase_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"detail": "Clase eliminada"}
 
-def clases_usadas(alumna_id, mes, anio, db):
+def clases_usadas(alumna_id, mes, año, db):
     return (
         db.query(ReservaClase)
         .filter(
             ReservaClase.alumna_id == alumna_id,
             ReservaClase.estado.in_(["ACTIVA", "ASISTIO"]),
             extract("month", ReservaClase.fecha_clase) == mes,
-            extract("year", ReservaClase.fecha_clase) == anio,
+            extract("year", ReservaClase.fecha_clase) == año,
         )
         .count()
     )
@@ -262,11 +264,35 @@ def clases_usadas(alumna_id, mes, anio, db):
 @app.post("/reservas", response_model=ReservaClaseResponse)
 def reservar_clase(reserva: ReservaClaseCreate, db: Session = Depends(get_db)):
 
-    clase = db.get(Clase,reserva.clase_id)
+    clase = db.get(Clase, reserva.clase_id)
     if not clase:
         raise HTTPException(404, "Clase no encontrada")
 
-    # Cupo
+    # Validar abono
+    mes = reserva.fecha_clase.month
+    año = reserva.fecha_clase.year
+
+    abono = db.query(Abono).filter(
+        Abono.alumna_id == reserva.alumna_id,
+        Abono.mes == mes,
+        Abono.año == año
+    ).first()
+
+    if not abono:
+        raise HTTPException(400, "La alumna no tiene abono activo para ese mes")
+
+    usadas = clases_usadas(reserva.alumna_id, mes, año, db)
+
+    disponibles = (
+        abono.clases_incluidas +
+        abono.clases_recuperadas -
+        usadas
+    )
+
+    if disponibles <= 0:
+        raise HTTPException(400, "No tiene clases disponibles en el abono")
+
+    # Validar cupo
     cupo = (
         db.query(ReservaClase)
         .filter(
@@ -279,25 +305,6 @@ def reservar_clase(reserva: ReservaClaseCreate, db: Session = Depends(get_db)):
 
     if cupo >= clase.cantidad_alumnas:
         raise HTTPException(400, "La clase ya está completa")
-
-    # Recuperaciones por mes
-    if reserva.es_recuperacion:
-        mes = reserva.fecha_clase.month
-        anio = reserva.fecha_clase.year
-
-        recuperaciones = (
-            db.query(ReservaClase)
-            .filter(
-                ReservaClase.alumna_id == reserva.alumna_id,
-                ReservaClase.es_recuperacion.is_(True),
-                extract("month", ReservaClase.fecha_clase) == mes,
-                extract("year", ReservaClase.fecha_clase) == anio,
-            )
-            .count()
-        )
-
-        if recuperaciones >= 2:
-            raise HTTPException(400, "Máximo 2 recuperaciones por mes")
 
     nueva = ReservaClase(
         alumna_id=reserva.alumna_id,
@@ -318,13 +325,28 @@ def reservar_masiva(data: ReservaMasivaCreate, db: Session = Depends(get_db)):
 
     reservas_creadas = []
 
+    abono = (
+    db.query(Abono)
+    .filter(
+        Abono.alumna_id == data.alumna_id,
+        Abono.mes == data.mes,
+        Abono.año == data.año
+    )
+    .with_for_update()
+    .first()
+    )   
+
+    if not abono:
+        raise HTTPException(400, "La alumna no tiene abono activo para ese mes")
+
     for clase_id in data.clase_ids:
-        clase = db.get(Clase,clase_id)
+
+        clase = db.get(Clase, clase_id)
         if not clase:
             continue
 
         fechas = fechas_del_mes_por_dia(
-            data.anio,
+            data.año,
             data.mes,
             clase.dia_semana
         )
@@ -341,7 +363,7 @@ def reservar_masiva(data: ReservaMasivaCreate, db: Session = Depends(get_db)):
             if existe:
                 continue
 
-            # Reutilizamos lógica de cupo
+            # Validar cupo
             cupo = (
                 db.query(ReservaClase)
                 .filter(
@@ -355,21 +377,17 @@ def reservar_masiva(data: ReservaMasivaCreate, db: Session = Depends(get_db)):
             if cupo >= clase.cantidad_alumnas:
                 continue
 
-            usadas = clases_usadas(data.alumna_id, data.mes, data.anio, db)
+            usadas_actuales = clases_usadas(data.alumna_id, data.mes, data.año, db)
+            usadas_actuales += len(reservas_creadas)
 
-            abono = db.query(Abono).filter(
-                Abono.alumna_id == data.alumna_id,
-                Abono.mes == data.mes,
-                Abono.anio == data.anio
-            ).first()
+            disponibles = (
+                abono.clases_incluidas +
+                abono.clases_recuperadas -
+                usadas_actuales
+            )
 
-            if not abono:
-                raise HTTPException(400, "La alumna no tiene abono activo para ese mes")
-
-
-            if usadas + len(reservas_creadas) >= abono.clases_incluidas:
+            if disponibles <= 0:
                 break
-
 
             nueva = ReservaClase(
                 alumna_id=data.alumna_id,
@@ -389,53 +407,18 @@ def reservar_masiva(data: ReservaMasivaCreate, db: Session = Depends(get_db)):
         "cantidad": len(reservas_creadas)
     }
 
-@app.put("/reservas/{reserva_id}/asistencia")
-def marcar_asistencia(reserva_id: int, asistio: bool, db: Session = Depends(get_db)):
-
-    reserva = db.get(ReservaClase,reserva_id)
-    if not reserva:
-        raise HTTPException(404, "Reserva no encontrada")
-    
-    if reserva.fecha_clase > date.today():
-        raise HTTPException(400, "No se puede marcar asistencia futura")
-
-    reserva.estado = "ASISTIO" if asistio else "NO_ASISTIO"
-    db.commit()
-
-    return {"detail": "Asistencia registrada"}
-
-@app.get("/reservas/cupo")
-def consultar_cupo(clase_id: int, fecha: date, db: Session = Depends(get_db)):
-
-    clase = db.get(Clase,clase_id)
-    if not clase:
-        raise HTTPException(404, "Clase no encontrada")
-
-    ocupados = (
-        db.query(ReservaClase)
-        .filter(
-            ReservaClase.clase_id == clase_id,
-            ReservaClase.fecha_clase == fecha,
-            ReservaClase.estado == "ACTIVA"
-        )
-        .count()
-    )
-
-    return {
-        "cupo_total": clase.cantidad_alumnas,
-        "ocupados": ocupados,
-        "disponibles": clase.cantidad_alumnas - ocupados
-    }
-
-
 
 @app.put("/reservas/{reserva_id}/cancelar")
 def cancelar_reserva(reserva_id: int, db: Session = Depends(get_db)):
-    reserva = db.get(ReservaClase,reserva_id)
+
+    reserva = db.get(ReservaClase, reserva_id)
     if not reserva:
         raise HTTPException(404, "Reserva no encontrada")
 
-    if datetime.utcnow() <= reserva.fecha_clase - timedelta(hours=6):
+    if reserva.estado not in ["ACTIVA"]:
+        raise HTTPException(400, "La reserva no puede cancelarse")
+
+    if datetime.utcnow() <= datetime.combine(reserva.fecha_clase, datetime.min.time()) - timedelta(hours=6):
         reserva.estado = "CANCELADA_A_TIEMPO"
     else:
         reserva.estado = "NO_ASISTIO"
@@ -444,37 +427,6 @@ def cancelar_reserva(reserva_id: int, db: Session = Depends(get_db)):
     db.commit()
 
     return {"detail": "Reserva cancelada"}
-
-@app.get("/reservas", response_model=list[ReservaClaseResponse])
-def listar_reservas(db: Session = Depends(get_db)):
-    return db.query(ReservaClase).all()
-
-
-
-@app.put("/reservas/{reserva_id}", response_model=ReservaClaseResponse)
-def actualizar_clase(reserva_id: int, datos: ReservaClaseUpdate, db: Session = Depends(get_db)):
-    reserva = db.get(ReservaClase,reserva_id)
-    if not reserva:
-        raise HTTPException(404, "Reserva no encontrada")
-
-    for k, v in datos.model_dump().items():
-        setattr(reserva, k, v)
-
-    db.commit()
-    db.refresh(reserva)
-    return reserva
-
-
-@app.delete("/reservas/{reserva_id}")
-def eliminar_reserva(reserva_id: int, db: Session = Depends(get_db)):
-    reserva = db.get(ReservaClase,reserva_id)
-    if not reserva:
-        raise HTTPException(404, "Reserva no encontrada")
-
-    db.delete(reserva)
-    db.commit()
-    return {"detail": "Reserva eliminada"}
-
 
 # ===================== ABONOS =====================
 
@@ -514,6 +466,40 @@ def actualizar_abono(abono_id: int, datos: AbonoUpdate, db: Session = Depends(ge
     return abono
 
 
+@app.post("/abonos/masivo")
+def crear_abonos_masivos(mes: int, año: int, clases_incluidas: int, db: Session = Depends(get_db)):
+
+    alumnas = db.query(Alumna).all()
+    creados = 0
+
+    for alumna in alumnas:
+
+        existe = db.query(Abono).filter(
+            Abono.alumna_id == alumna.id,
+            Abono.mes == mes,
+            Abono.año == año
+        ).first()
+
+        if existe:
+            continue
+
+        nuevo = Abono(
+            alumna_id=alumna.id,
+            mes=mes,
+            año=año,
+            clases_incluidas=clases_incluidas,
+            clases_recuperadas=0,
+            fecha_pago=date.today()
+        )
+
+        db.add(nuevo)
+        creados += 1
+
+    db.commit()
+
+    return {"abonos_creados": creados}
+
+
 @app.delete("/abonos/{abono_id}")
 def eliminar_abono(abono_id: int, db: Session = Depends(get_db)):
     abono = db.get(Abono,abono_id)
@@ -524,17 +510,136 @@ def eliminar_abono(abono_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"detail": "Abono eliminada"}
 
+# ================================RESUMEN ABONO==========================================
+@app.get("/abonos/resumen/{alumna_id}")
+def resumen_mensual(
+    alumna_id: int,
+    mes: int,
+    año: int,
+    db: Session = Depends(get_db)
+):
+
+    # Buscar abono
+    abono = db.query(Abono).filter(
+        Abono.alumna_id == alumna_id,
+        Abono.mes == mes,
+        Abono.año == año
+    ).first()
+
+    if not abono:
+        raise HTTPException(404, "No existe abono para ese mes")
+
+    # Reservas del mes
+    reservas_mes = db.query(ReservaClase).filter(
+        ReservaClase.alumna_id == alumna_id,
+        extract("month", ReservaClase.fecha_clase) == mes,
+        extract("year", ReservaClase.fecha_clase) == año
+    ).all()
+
+    # Contadores
+    activas = sum(1 for r in reservas_mes if r.estado == "ACTIVA")
+    asistidas = sum(1 for r in reservas_mes if r.estado == "ASISTIO")
+    canceladas = sum(1 for r in reservas_mes if r.estado == "CANCELADA_A_TIEMPO")
+    no_asistio = sum(1 for r in reservas_mes if r.estado == "NO_ASISTIO")
+
+    usadas = activas + asistidas
+
+    total_disponible = (
+        abono.clases_incluidas +
+        abono.clases_recuperadas
+    )
+
+    disponibles = total_disponible - usadas
+
+    return {
+        "alumna_id": alumna_id,
+        "mes": mes,
+        "año": año,
+
+        "abono": {
+            "clases_incluidas": abono.clases_incluidas,
+            "clases_recuperadas": abono.clases_recuperadas,
+            "total_habilitadas": total_disponible
+        },
+
+        "reservas": {
+            "activas": activas,
+            "asistidas": asistidas,
+            "canceladas_a_tiempo": canceladas,
+            "no_asistio": no_asistio,
+            "usadas": usadas,
+            "disponibles": max(disponibles, 0)
+        },
+
+        "detalle_reservas": [
+            {
+                "reserva_id": r.id,
+                "clase_id": r.clase_id,
+                "fecha": r.fecha_clase,
+                "estado": r.estado,
+                "es_recuperacion": r.es_recuperacion
+            }
+            for r in reservas_mes
+        ]
+    }
+
 
 # ================================REVISIÓN DÍAS DEL MES==========================================
 
-def fechas_del_mes_por_dia(anio, mes, dia_semana):
+def fechas_del_mes_por_dia(año, mes, dia_semana):
     fechas = []
-    _, ultimo_dia = calendar.monthrange(anio, mes)
+    _, ultimo_dia = calendar.monthrange(año, mes)
 
     for dia in range(1, ultimo_dia + 1):
-        fecha = date(anio, mes, dia)
+        fecha = date(año, mes, dia)
         if fecha.weekday() == dia_semana:
             fechas.append(fecha)
 
     return fechas
 
+# ================================RESUMEN MENSUAL==========================================
+from sqlalchemy import func
+from datetime import date
+
+@app.get("/resumen-mensual")
+def resumen_mensual(mes: int, año: int, db: Session = Depends(get_db)):
+
+    # 1️⃣ Alumnas con abono activo ese mes
+    alumnas_activas = (
+        db.query(Abono)
+        .filter(
+            Abono.mes == mes,
+            Abono.año == año
+        )
+        .count()
+    )
+
+    # 2️⃣ Total reservas activas del mes
+    reservas_totales = (
+        db.query(ReservaClase)
+        .filter(
+            func.extract("month", ReservaClase.fecha_clase) == mes,
+            func.extract("year", ReservaClase.fecha_clase) == año,
+            ReservaClase.estado == "ACTIVA"
+        )
+        .count()
+    )
+
+    # 3️⃣ Clases usadas (ASISTIO)
+    clases_usadas = (
+        db.query(ReservaClase)
+        .filter(
+            func.extract("month", ReservaClase.fecha_clase) == mes,
+            func.extract("year", ReservaClase.fecha_clase) == año,
+            ReservaClase.estado == "ASISTIO"
+        )
+        .count()
+    )
+
+    return {
+        "mes": mes,
+        "año": año,
+        "alumnas_activas": alumnas_activas,
+        "reservas_totales": reservas_totales,
+        "clases_usadas": clases_usadas
+    }

@@ -1,23 +1,40 @@
-import Alumnas from "./components/Alumnas";
-import Profes from "./components/Profes";
-import Reservas from "./components/Reservas";
-import Clases from "./components/Clases";
-import Seguros from "./components/Seguros";
-import Abonos from "./components/Abonos";
+import { Routes, Route, Link } from "react-router-dom";
+import "./App.css";
+
+import Dashboard from "./pages/Dashboard";
+import Alumnas from "./pages/Alumnas";
+import Profes from "./pages/Profes";
+import Clases from "./pages/Clases";
+import Reservas from "./pages/Reservas";
+import Seguros from "./pages/Seguros";
+import Abonos from "./pages/Abonos";
 
 function App() {
   return (
-    <div>
+    <div className="app-container">
       <h1>Cuerpo y Alma</h1>
-      <Alumnas />
-      <Profes />
-      <Clases />
-      <Reservas />
-      <Seguros />
-      <Abonos />
+
+      <nav>
+        <Link to="/">Dashboard</Link> |{" "}
+        <Link to="/alumnas">Alumnas</Link> |{" "}
+        <Link to="/profes">Profes</Link> |{" "}
+        <Link to="/clases">Clases</Link> |{" "}
+        <Link to="/reservas">Reservas</Link> |{" "}
+        <Link to="/seguros">Seguros</Link> |{" "}
+        <Link to="/abonos">Abonos</Link>
+      </nav>
+
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/alumnas" element={<Alumnas />} />
+        <Route path="/profes" element={<Profes />} />
+        <Route path="/clases" element={<Clases />} />
+        <Route path="/reservas" element={<Reservas />} />
+        <Route path="/seguros" element={<Seguros />} />
+        <Route path="/abonos" element={<Abonos />} />
+      </Routes>
     </div>
   );
 }
-
 
 export default App;

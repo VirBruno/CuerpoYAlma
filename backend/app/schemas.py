@@ -84,6 +84,7 @@ class AbonoResponse(BaseModel):
     id: int
     alumna_id: int
     mes: int
+    año: int
     clases_incluidas: int
     clases_usadas: int
     clases_recuperadas: int
