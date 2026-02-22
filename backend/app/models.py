@@ -3,7 +3,7 @@ from sqlalchemy import (
     ForeignKey, DateTime, Boolean, UniqueConstraint
 )
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import date, datetime
 from app.database import Base
 
 
@@ -42,8 +42,8 @@ class Alumna(Base):
         cascade="all, delete-orphan"
     )
 
-    reservas = relationship(
-        "ReservaClase",
+    asistencias = relationship(
+        "AsistenciaClase",
         back_populates="alumna",
         cascade="all, delete-orphan"
     )
@@ -62,8 +62,8 @@ class Clase(Base):
     profe_id = Column(Integer, ForeignKey("profes.id"), nullable=False)
     cantidad_alumnas = Column(Integer, default=0)
 
-    reservas = relationship(
-        "ReservaClase",
+    asistencias = relationship(
+        "AsistenciaClase",
         back_populates="clase",
         cascade="all, delete-orphan"
     )
@@ -78,25 +78,10 @@ class Abono(Base):
 
     mes = Column(Integer, nullable=False)  # ej: "2026-01"
     año = Column(Integer, nullable=False)
-    clases_incluidas = Column(Integer, default=8)
-    clases_usadas = Column(Integer, default=0)
-    clases_recuperadas = Column(Integer, default=0)
 
     fecha_pago = Column(Date, nullable=False)
 
     alumna = relationship("Alumna", back_populates="abonos")
-
-
-# ---------- RESERVAS ----------
-class ReservaClase(Base):
-    __tablename__ = "reservas_clase"
-
-    id = Column(Integer, primary_key=True, index=True)
-
-    alumna_id = Column(Integer, ForeignKey("alumnas.id"), nullable=False)
-    clase_id = Column(Integer, ForeignKey("clases.id"), nullable=False)
-
-    fecha_clase = Column(Date, nullable=False)
 
     estado = Column(
         String,
@@ -111,14 +96,34 @@ class ReservaClase(Base):
 
     es_recuperacion = Column(Boolean, default=False)
 
-    alumna = relationship("Alumna", back_populates="reservas")
-    clase = relationship("Clase", back_populates="reservas")
+
+# ---------- ASISTENCIA ----------
+class AsistenciaClase(Base):
+    __tablename__ = "asistencias_clase"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    alumna_id = Column(Integer, ForeignKey("alumnas.id"), nullable=False)
+    clase_id = Column(Integer, ForeignKey("clases.id"), nullable=False)
+
+    fecha_clase = Column(Date, nullable=False)
+
+    estado = Column(
+        String,
+        nullable=False,
+        default="ASISTIO"
+
+        # CANCELADA_A_TIEMPO | ASISTIO | NO_ASISTIO | RECUPERADA
+    )
+
+    alumna = relationship("Alumna", back_populates="asistencias")
+    clase = relationship("Clase", back_populates="asistencias")
 
     __table_args__ = (
         UniqueConstraint(
             "alumna_id",
             "clase_id",
             "fecha_clase",
-            name="uq_reserva_alumna_clase_fecha"
+            name="uq_asistencia_alumna_clase_fecha"
         ),
     )

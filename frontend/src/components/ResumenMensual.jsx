@@ -27,7 +27,7 @@ export default function ResumenMensual() {
 
       <div className="card">
         <h3>Reservas del mes</h3>
-        <p>{resumen.reservas_totales}</p>
+        <p>{resumen.asistencias_totales}</p>
       </div>
 
       <div className="card">

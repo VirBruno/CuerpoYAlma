@@ -5,7 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import Alumnas from "./pages/Alumnas";
 import Profes from "./pages/Profes";
 import Clases from "./pages/Clases";
-import Reservas from "./pages/Reservas";
+import Asistencias from "./pages/Asistencias";
 import Seguros from "./pages/Seguros";
 import Abonos from "./pages/Abonos";
 
@@ -19,7 +19,7 @@ function App() {
         <Link to="/alumnas">Alumnas</Link> |{" "}
         <Link to="/profes">Profes</Link> |{" "}
         <Link to="/clases">Clases</Link> |{" "}
-        <Link to="/reservas">Reservas</Link> |{" "}
+        <Link to="/asistencias">Asistencias</Link> |{" "}
         <Link to="/seguros">Seguros</Link> |{" "}
         <Link to="/abonos">Abonos</Link>
       </nav>
@@ -29,7 +29,7 @@ function App() {
         <Route path="/alumnas" element={<Alumnas />} />
         <Route path="/profes" element={<Profes />} />
         <Route path="/clases" element={<Clases />} />
-        <Route path="/reservas" element={<Reservas />} />
+        <Route path="/asistencias" element={<Asistencias />} />
         <Route path="/seguros" element={<Seguros />} />
         <Route path="/abonos" element={<Abonos />} />
       </Routes>

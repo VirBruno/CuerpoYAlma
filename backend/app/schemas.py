@@ -62,10 +62,11 @@ class ClaseResponse(ClaseBase):
 class AbonoBase(BaseModel):
     alumna_id: int
     mes: int
-    clases_incluidas: int
-    clases_usadas: int
-    clases_recuperadas: int
+    año: int
     fecha_pago: date
+    cancelada_en: datetime | None
+    es_recuperacion: bool = False
+    estado: str
 
 class AbonoCreate(AbonoBase):
     pass
@@ -73,9 +74,6 @@ class AbonoCreate(AbonoBase):
 class AbonoUpdate(BaseModel):
     alumna_id: int | None = None
     mes: int | None = None
-    clases_incluidas: int | None = None
-    clases_usadas: int | None = None
-    clases_recuperadas: int | None = None
     fecha_pago: date | None = None
 
 
@@ -85,40 +83,43 @@ class AbonoResponse(BaseModel):
     alumna_id: int
     mes: int
     año: int
-    clases_incluidas: int
-    clases_usadas: int
-    clases_recuperadas: int
     fecha_pago: date
+    cancelada_en: datetime | None
+    es_recuperacion: bool = False
+    estado: str
 
     class Config:
         from_attributes = True
 
 
-class ReservaClaseBase(BaseModel):
+class AsistenciaClaseBase(BaseModel):
     alumna_id: int
     clase_id: int
     fecha_clase: date
 
 
-class ReservaClaseCreate(ReservaClaseBase):
-    es_recuperacion: bool = False
+class AsistenciaClaseCreate(AsistenciaClaseBase):
+    pass
 
 
-class ReservaClaseResponse(ReservaClaseBase):
+class AsistenciaClaseResponse(AsistenciaClaseBase):
     id: int
     estado: str
     creada_en: datetime
-    cancelada_en: datetime | None
 
     class Config:
         from_attributes = True
 
-class ReservaClaseUpdate(ReservaClaseBase):
+class AsistenciaClaseUpdate(AsistenciaClaseBase):
     pass
 
-class ReservaMasivaCreate(ReservaClaseBase):
+class AsistenciaMasivaCreate(AsistenciaClaseBase):
     pass
 
+class AsistenciaMasivaUpdate(BaseModel):
+    clase_id: int
+    fecha: date
+    alumnas_presentes: list[int]
 
 class SeguroBase(BaseModel):
     numero: int

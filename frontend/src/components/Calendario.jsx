@@ -3,22 +3,22 @@ import client from "../api";
 import "./Calendario.css";
 
 export default function Calendario() {
-  const [reservas, setReservas] = useState([]);
+  const [asistencias, setAsistencias] = useState([]);
 
   useEffect(() => {
-    client.get("/reservas").then((res) => {
-      setReservas(res.data);
+    client.get("/asistencias").then((res) => {
+      setAsistencias(res.data);
     });
   }, []);
 
   return (
     <div className="calendario">
-      <h3>Reservas</h3>
+      <h3>Asistencias</h3>
 
-      {reservas.length === 0 && <p>No hay reservas</p>}
+      {asistencias.length === 0 && <p>No hay asistencias</p>}
 
       <ul>
-        {reservas.map((r) => (
+        {asistencias.map((r) => (
           <li key={r.id}>
             {r.fecha_clase} - Clase {r.clase_id} - {r.estado}
           </li>
