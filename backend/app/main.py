@@ -407,6 +407,10 @@ def reservar_masiva(data: ReservaMasivaCreate, db: Session = Depends(get_db)):
         "cantidad": len(reservas_creadas)
     }
 
+@app.get("/reservas", response_model=list[ReservaClaseResponse])
+def listar_reservas(db: Session = Depends(get_db)):
+    return db.query(ReservaClase).all()
+
 
 @app.put("/reservas/{reserva_id}/cancelar")
 def cancelar_reserva(reserva_id: int, db: Session = Depends(get_db)):
@@ -432,7 +436,23 @@ def cancelar_reserva(reserva_id: int, db: Session = Depends(get_db)):
 
 @app.post("/abonos", response_model=AbonoResponse)
 def crear_abono(abono: AbonoCreate, db: Session = Depends(get_db)):
-    nueva = Abono(**abono.model_dump())
+
+    if not abono.fecha_pago:
+        raise HTTPException(400, "Fecha de pago requerida")
+
+    mes = abono.fecha_pago.month
+    año = abono.fecha_pago.year
+
+    nueva = Abono(
+        alumna_id=abono.alumna_id,
+        mes=mes,
+        año=año,
+        clases_incluidas=abono.clases_incluidas,
+        clases_usadas=abono.clases_usadas,
+        clases_recuperadas=abono.clases_recuperadas,
+        fecha_pago=abono.fecha_pago,
+    )
+
     db.add(nueva)
     db.commit()
     db.refresh(nueva)
@@ -642,4 +662,31 @@ def resumen_mensual(mes: int, año: int, db: Session = Depends(get_db)):
         "alumnas_activas": alumnas_activas,
         "reservas_totales": reservas_totales,
         "clases_usadas": clases_usadas
+    }
+
+# ================================CUPOS DE CLASES==========================================
+
+@app.get("/reservas/cupo")
+def obtener_cupo(clase_id: int, fecha: date, db: Session = Depends(get_db)):
+
+    clase = db.get(Clase, clase_id)
+    if not clase:
+        raise HTTPException(404, "Clase no encontrada")
+
+    reservas_activas = (
+        db.query(ReservaClase)
+        .filter(
+            ReservaClase.clase_id == clase_id,
+            ReservaClase.fecha_clase == fecha,
+            ReservaClase.estado == "ACTIVA"
+        )
+        .count()
+    )
+
+    disponibles = clase.cantidad_alumnas - reservas_activas
+
+    return {
+        "cupo_total": clase.cantidad_alumnas,
+        "reservados": reservas_activas,
+        "disponibles": max(disponibles, 0)
     }
