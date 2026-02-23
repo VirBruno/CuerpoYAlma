@@ -99,7 +99,7 @@ export default function Abonos() {
 
   return (
     <div>
-      <h2>Abonos y Planificación</h2>
+      <h2>Abonos</h2>
       <button onClick={() => { resetForm(); setModalOpen(true); }}>Crear Nuevo Abono</button>
 
       {/* Renderizado de la lista... igual al tuyo */}
@@ -124,7 +124,7 @@ export default function Abonos() {
             <div className="calendar-container">
               <Calendar
                 // Deshabilita días que no son de esta clase
-                tileDisabled={({ date }) => !fechasDisponibles.includes(formatearFecha(date))}
+                //tileDisabled={({ date }) => !fechasDisponibles.includes(formatearFecha(date))}
                 onClickDay={(date) => {
                   const f = formatearFecha(date);
                   if (!fechasDisponibles.includes(f)) return; // Evita seleccionar días inválidos
