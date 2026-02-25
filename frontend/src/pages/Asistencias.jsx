@@ -1,113 +1,162 @@
-import { useEffect, useState } from "react";
-import { getClases } from "../services/clases";
-import api from "../api";
+import React, { useState, useEffect } from "react";
 
-export default function Asistencia() {
-  const [clases, setClases] = useState([]);
-  const [claseId, setClaseId] = useState("");
-  const [fecha, setFecha] = useState("");
-  const [lista, setLista] = useState([]);
-  const [presentes, setPresentes] = useState([]);
+const Asistencias = () => {
+  // 1. ESTADOS PRINCIPALES
+  const [registros, setRegistros] = useState([
+    { id: 1, alumna: "Vir", clase: "Pole Fijo", fecha: "2023-10-25", estado: "ASISTIÓ" },
+    { id: 2, alumna: "Euge", clase: "Pole Fijo", fecha: "2023-10-25", estado: "FALTÓ" },
+  ]);
 
-  useEffect(() => {
-    const cargarClases = async () => {
-      const res = await getClases();
-      setClases(res.data);
-    };
-    cargarClases();
-  }, []);
+  const [showModal, setShowModal] = useState(false);
+  const [step, setStep] = useState(1); // Paso 1: Filtro, Paso 2: Checkbox
+  
+  // Estados para el formulario del modal
+  const [claseSel, setClaseSel] = useState("");
+  const [fechaSel, setFechaSel] = useState("");
+  const [alumnasEncontradas, setAlumnasEncontradas] = useState([]);
+  
+  // Estado para la búsqueda/filtro en el historial
+  const [busquedaAlumna, setBusquedaAlumna] = useState("");
 
-  // 🔹 Traer lista del backend
-  const cargarLista = async () => {
-    if (!claseId || !fecha) return;
+  // 2. SIMULACIÓN DE CRUCE DE ABONOS (Aquí es donde "traerías" de la DB)
+  const buscarReservas = () => {
+    if (!claseSel || !fechaSel) return alert("Completa clase y fecha");
 
-    const res = await api.get("/asistencias/clase", {
-      params: { clase_id: claseId, fecha },
-    });
-
-    setLista(res.data);
-
-    // Pre-marcar las que ya están como ASISTIO
-    const yaPresentes = res.data
-      .filter((a) => a.estado === "ASISTIO")
-      .map((a) => a.alumna_id);
-
-    setPresentes(yaPresentes);
+    // Simulamos que el sistema busca quién tiene reserva para esa clase
+    // En el futuro, aquí harías un fetch a tu backend
+    const mockReservas = [
+      { idAlumna: 101, nombre: "Vir", checked: false },
+      { idAlumna: 102, nombre: "Euge", checked: false },
+      { idAlumna: 103, nombre: "Andre", checked: false },
+    ];
+    
+    setAlumnasEncontradas(mockReservas);
+    setStep(2); // Pasamos a la lista de checkboxes
   };
 
-  // 🔹 Toggle checkbox
-  const togglePresente = (alumnaId) => {
-    if (presentes.includes(alumnaId)) {
-      setPresentes(presentes.filter((id) => id !== alumnaId));
-    } else {
-      setPresentes([...presentes, alumnaId]);
-    }
+  // 3. GUARDAR EL REGISTRO FINAL
+  const finalizarPaseLista = () => {
+    const nuevosRegistros = alumnasEncontradas.map(a => ({
+      id: Date.now() + Math.random(),
+      alumna: a.nombre,
+      clase: claseSel,
+      fecha: fechaSel,
+      estado: a.checked ? "ASISTIÓ" : "FALTÓ"
+    }));
+
+    setRegistros([...nuevosRegistros, ...registros]);
+    resetModal();
   };
 
-  // 🔹 Enviar al backend
-  const guardarLista = async () => {
-    await api.put("/asistencias/actualizar-masivo", {
-      clase_id: Number(claseId),
-      fecha,
-      alumnas_presentes: presentes,
-    });
-
-    alert("Lista guardada correctamente");
+  const resetModal = () => {
+    setShowModal(false);
+    setStep(1);
+    setClaseSel("");
+    setFechaSel("");
   };
+
+  const handleCheckboxChange = (index) => {
+    const updated = [...alumnasEncontradas];
+    updated[index].checked = !updated[index].checked;
+    setAlumnasEncontradas(updated);
+  };
+
+  // 4. FILTRO DE BÚSQUEDA POR ALUMNA
+  const registrosFiltrados = registros.filter(r => 
+    r.alumna.toLowerCase().includes(busquedaAlumna.toLowerCase())
+  );
 
   return (
-    <div>
-      <h2>Pase de Lista</h2>
+    <div className="container">
+      <h2 className="titulo-seccion">Asistencias</h2>
+      
+      <div className="acciones-header">
+        <button className="btn-primario" onClick={() => setShowModal(true)}>
+          Hacer Pase de Lista
+        </button>
+        
+        {/* Input de consulta por alumna */}
+        <input 
+          type="text" 
+          placeholder="🔍 Consultar por alumna..." 
+          className="input-busqueda"
+          value={busquedaAlumna}
+          onChange={(e) => setBusquedaAlumna(e.target.value)}
+        />
+      </div>
 
-      {/* CLASE */}
-      <select
-        value={claseId}
-        onChange={(e) => setClaseId(e.target.value)}
-      >
-        <option value="">Seleccionar clase</option>
-        {clases.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.disciplina} – {c.dia} {c.hora}
-          </option>
-        ))}
-      </select>
+      <hr className="separador-horizontal" />
 
-      {/* FECHA */}
-      <input
-        type="date"
-        value={fecha}
-        onChange={(e) => setFecha(e.target.value)}
-      />
-
-      <button onClick={cargarLista}>
-        Cargar Lista
-      </button>
-
-      <hr />
-
-      {/* LISTA DE ALUMNAS */}
-      {lista.length > 0 && (
-        <>
-          <h3>Alumnas</h3>
-
-          {lista.map((a) => (
-            <div key={a.alumna_id}>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={presentes.includes(a.alumna_id)}
-                  onChange={() => togglePresente(a.alumna_id)}
-                />
-                {a.nombre}
-              </label>
+      <div className="historial-lista">
+        <h3 className="subtitulo">
+          {busquedaAlumna ? `Asistencias de: ${busquedaAlumna}` : "Historial de Registros"}
+        </h3>
+        
+        {registrosFiltrados.map((reg) => (
+          <div key={reg.id} className="tarjeta-blanca-item">
+            <div className="info-principal">
+              <span className="alumna-name"><strong>{reg.alumna}</strong></span>
+              <span className="clase-tag">{reg.clase}</span>
+              <span className="fecha-item">— {reg.fecha.split('-').reverse().join('/')}</span>
+              <span className={`badge-asistencia ${reg.estado === "ASISTIÓ" ? "asistio" : "no-asistio"}`}>
+                {reg.estado}
+              </span>
             </div>
-          ))}
+            
+            <div className="acciones-derecha">
+              <button className="btn-accion editar">Editar</button>
+              <button className="btn-accion eliminar">Eliminar</button>
+            </div>
+          </div>
+        ))}
+      </div>
 
-          <button onClick={guardarLista}>
-            Guardar Asistencias
-          </button>
-        </>
+      {/* MODAL EVOLUCIONADO */}
+      {showModal && (
+        <div className="modal-fondo-oscuro">
+          <div className="modal-caja">
+            <h3 className="modal-titulo">Pase de Lista</h3>
+            
+            {step === 1 ? (
+              <div className="modal-step-1">
+                <p>Selecciona la clase y fecha para cruzar abonos:</p>
+                <select className="input-select" value={claseSel} onChange={e => setClaseSel(e.target.value)}>
+                  <option value="">Seleccionar clase</option>
+                  <option value="Pole Fijo">Pole Fijo</option>
+                  <option value="Flexibilidad">Flexibilidad</option>
+                </select>
+                <input type="date" className="input-fecha" value={fechaSel} onChange={e => setFechaSel(e.target.value)} />
+                <div className="modal-botones">
+                  <button className="btn-primario" onClick={buscarReservas}>Buscar Alumnas</button>
+                  <button className="btn-secundario" onClick={resetModal}>Cancelar</button>
+                </div>
+              </div>
+            ) : (
+              <div className="modal-step-2">
+                <p>Clase: <strong>{claseSel}</strong> | {fechaSel}</p>
+                <div className="lista-check-alumnas">
+                  {alumnasEncontradas.map((alum, idx) => (
+                    <label key={alum.idAlumna} className="check-item">
+                      <input 
+                        type="checkbox" 
+                        checked={alum.checked} 
+                        onChange={() => handleCheckboxChange(idx)} 
+                      />
+                      {alum.nombre}
+                    </label>
+                  ))}
+                </div>
+                <div className="modal-botones">
+                  <button className="btn-primario" onClick={finalizarPaseLista}>Cargar Lista</button>
+                  <button className="btn-secundario" onClick={() => setStep(1)}>Volver</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
-}
+};
+
+export default Asistencias;

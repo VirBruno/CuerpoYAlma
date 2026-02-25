@@ -97,8 +97,10 @@ export default function Alumnas() {
         {alumnas.map((a) => (
           <li key={a.id}>
             {a.nombre} (DNI {a.dni})
-            <button onClick={() => handleEdit(a)}>Editar</button>
-            <button onClick={() => handleDelete(a.id)}>Eliminar</button>
+            <div className="acciones-lista">
+              <button onClick={() => handleEdit(a)}>Editar</button>
+              <button onClick={() => handleDelete(a.id)}>Eliminar</button>
+            </div>
           </li>
         ))}
       </ul>

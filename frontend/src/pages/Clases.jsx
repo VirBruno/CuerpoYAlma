@@ -130,8 +130,10 @@ const DIA = [
               {clases.map((c) => (
                 <li key={c.id}>
                   {c.disciplina} – {c.dia} – {c.hora} – alumnas: {c.cantidad_alumnas}
-                  <button onClick={() => handleEdit(c)}>Editar</button>
-                  <button onClick={() => handleDelete(c.id)}>Eliminar</button>
+                  <div className="acciones-lista">
+                    <button onClick={() => handleEdit(c)}>Editar</button>
+                    <button onClick={() => handleDelete(c.id)}>Eliminar</button>
+                  </div>
                 </li>
               ))}
             </ul>

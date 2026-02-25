@@ -16,11 +16,34 @@ a:hover {
   color: #535bf2;
 }
 
-body {
+
+html, body {
   margin: 0;
+  padding: 0;
   font-family: 'Playfair Display', serif;
-  background: linear-gradient(135deg, #2E0F3A, #7B2CBF);
-  color: white;
+  /* El degradado debe estar aquí y ser fijo si quieres que no se corte */
+  background: linear-gradient(135deg, #FFFFFF, #C77DFF);
+  background-attachment: fixed; 
+  color: #2E0F3A; /* Cambié white por oscuro para que se lea sobre el fondo claro */
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden; 
+}
+
+#root {
+  min-height: 100vh;      /* Asegura que ocupe todo el alto de la pantalla */
+  display: flex;
+  flex-direction: column; /* Apila el contenido (nav, h2, ul) hacia abajo */
+  align-items: center;    /* Centra todo horizontalmente */
+  justify-content: flex-start; /* Alinea al inicio superior, pero centrado */
+  padding: 40px 20px;     /* Espaciado para que no toque los bordes en móviles */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.main-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #FFFFFF, #C77DFF);
 }
 
 h1 {
@@ -93,11 +116,11 @@ button:focus-visible {
 .form-group {
   display: flex;
   flex-direction: column;
-  margin-bottom: 15px;
+  margin-bottom:0px;
 }
 
 .form-group label {
-  margin-bottom: 5px;
+  margin-bottom: 0px;
   font-weight: 600;
 }
 
@@ -108,8 +131,11 @@ button:focus-visible {
 }
 
 .navbar {
+  width: 100%;
   display: flex;
-  justify-content: space-between;
-  padding: 15px 30px;
+  justify-content: center; /* Centra los links del menú */
+  gap: 20px;
   background-color: var(--violeta-oscuro);
+  padding: 15px 0;
+  margin-bottom: 30px;
 }

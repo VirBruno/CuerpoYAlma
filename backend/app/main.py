@@ -331,35 +331,48 @@ def cancelar_asistencia(asistencia_id: int, db: Session = Depends(get_db)):
 
 @app.post("/abonos", response_model=AbonoResponse)
 def crear_abono(data: AbonoCreate, db: Session = Depends(get_db)):
-    # 1. Crear el registro del Abono (datos contables/vigencia)
-    # Asumo que tu Schema 'AbonoCreate' tiene: alumna_id, mes, año, clases_incluidas y un campo 'fechas_planificadas'
-    nuevo_abono = Abono(
-        alumna_id=data.alumna_id,
-        mes=data.mes,
-        año=data.año,
-        clases_incluidas=data.clases_incluidas,
-        es_recuperacion=data.es_recuperacion,
-        estado="RESERVADA"
-    )
-    db.add(nuevo_abono)
-    
-    # 2. GENERACIÓN MASIVA DE ASISTENCIAS (La planificación)
-    # 'data.fechas_planificadas' es una lista de objetos date enviada desde el frontend
-    if hasattr(data, 'fechas_planificadas') and data.fechas_planificadas:
-        for fecha in data.fechas_planificadas:
-            # Creamos un registro por cada fecha en estado "RESERVADA"
+    try:
+        # Convertimos la lista de objetos date a lista de strings ISO (YYYY-MM-DD)
+        # Esto es lo que soluciona el error de "not JSON serializable"
+        fechas_como_string = [f.isoformat() for f in data.fechas_clase]
+
+        # 1. Crear el registro del Abono
+        nuevo_abono = Abono(
+            alumna_id=data.alumna_id,
+            clase_id=data.clase_id,
+            # Guardamos los strings, que sí son serializables a JSON
+            fechas_clase=fechas_como_string, 
+            mes=data.mes,
+            año=data.año,
+            fecha_pago=data.fecha_pago,
+            estado="PAGO",
+            es_recuperacion=data.es_recuperacion,
+            clases_incluidas=data.clases_incluidas
+        )
+        db.add(nuevo_abono)
+        
+        # 2. Generar asistencias
+        # Aquí seguimos usando data.fechas_clase porque AsistenciaClase 
+        # sí espera un objeto date en su columna fecha_clase
+        for fecha_obj in data.fechas_clase:
+            validar_cupo(db, data.clase_id, fecha_obj) 
+            
             nueva_asistencia = AsistenciaClase(
                 alumna_id=data.alumna_id,
-                clase_id=data.clase_id, # La clase elegida para este abono
-                fecha_clase=fecha,
-                es_recuperacion=data.es_recuperacion,
+                clase_id=data.clase_id,
+                fecha_clase=fecha_obj,
                 estado="RESERVADA"
             )
             db.add(nueva_asistencia)
-    
-    db.commit()
-    db.refresh(nuevo_abono)
-    return nuevo_abono
+        
+        db.commit()
+        db.refresh(nuevo_abono)
+        return nuevo_abono
+
+    except Exception as e:
+        db.rollback()
+        print(f"🔥 ERROR CRÍTICO EN ABONO: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
 
 @app.get("/abonos", response_model=list[AbonoResponse])
@@ -420,7 +433,6 @@ def disponibilidad_abono(alumna_id: int, db: Session = Depends(get_db)):
     }
 
 
-
 # ================================RESUMEN ABONO==========================================
 @app.get("/abonos/resumen/{alumna_id}")
 def resumen_abono(alumna_id: int, mes: int, año: int, db: Session = Depends(get_db)):
@@ -459,27 +471,32 @@ def resumen_abono(alumna_id: int, mes: int, año: int, db: Session = Depends(get
 
 # ================================REVISIÓN DÍAS DEL MES==========================================
 
-def fechas_del_mes_por_dia(año, mes, dia):
+def fechas_del_mes_por_dia(año, mes, nombre_dia_español):
+    # Mapeo de nombres que vienen del front a números de Python (Monday=0)
+    dias_map = {
+        "Lunes": 0, "Martes": 1, "Miércoles": 2, "Jueves": 3,
+        "Viernes": 4, "Sábado": 5, "Domingo": 6
+    }
+    target_day = dias_map.get(nombre_dia_español)
+    
     fechas = []
     _, ultimo_dia = calendar.monthrange(año, mes)
 
-    for dia in range(1, ultimo_dia + 1):
-        fecha = date(año, mes, dia)
-        if fecha.weekday() == dia:
+    for dia_mes in range(1, ultimo_dia + 1):
+        fecha = date(año, mes, dia_mes)
+        if fecha.weekday() == target_day:
             fechas.append(fecha)
-
     return fechas
 
 @app.get("/clases/{clase_id}/fechas")
 def obtener_fechas_clase(clase_id: int, mes: int, año: int, db: Session = Depends(get_db)):
-
     clase = db.get(Clase, clase_id)
     if not clase:
         raise HTTPException(404, "Clase no encontrada")
 
+    # Usamos clase.dia (ej: "Lunes") para calcular
     fechas = fechas_del_mes_por_dia(año, mes, clase.dia)
-
-    return {"fechas": fechas}
+    return {"fechas": [f.isoformat() for f in fechas]}
 
 # ================================RESUMEN MENSUAL==========================================
 from sqlalchemy import func
@@ -618,18 +635,23 @@ def obtener_lista_clase(clase_id: int, fecha: date, db: Session = Depends(get_db
 
 # ================================CUPOS DE CLASES==========================================
 
-@app.get("/abono/cupo")
+@app.get("/abonos/cupo")
 def obtener_cupo(clase_id: int, fecha: date, db: Session = Depends(get_db)):
-
     clase = db.get(Clase, clase_id)
     if not clase:
         raise HTTPException(404, "Clase no encontrada")
 
+    # Calculamos las asistencias reales
+    asistencias_totales = db.query(AsistenciaClase).filter(
+        AsistenciaClase.clase_id == clase_id,
+        AsistenciaClase.fecha_clase == fecha
+    ).count()
 
+    disponibles = clase.cantidad_alumnas - asistencias_totales
 
     return {
         "cupo_total": clase.cantidad_alumnas,
-        "asistencias": asistencias_activas,
+        "asistencias": asistencias_totales,
         "disponibles": max(disponibles, 0)
     }
 

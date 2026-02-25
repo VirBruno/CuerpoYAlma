@@ -1,6 +1,6 @@
 from sqlalchemy import (
     Column, Integer, String, Date, Time,
-    ForeignKey, DateTime, Boolean, UniqueConstraint
+    ForeignKey, DateTime, Boolean, UniqueConstraint, JSON
 )
 from sqlalchemy.orm import relationship
 from datetime import date, datetime
@@ -68,6 +68,12 @@ class Clase(Base):
         cascade="all, delete-orphan"
     )
 
+    abonos = relationship(
+        "Abono",
+        back_populates="clase",
+        cascade="all, delete-orphan"
+    )
+
 
 # ---------- ABONOS ----------
 class Abono(Base):
@@ -75,13 +81,17 @@ class Abono(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     alumna_id = Column(Integer, ForeignKey("alumnas.id"), nullable=False)
+    clase_id = Column(Integer, ForeignKey("clases.id"), nullable=False)
 
-    mes = Column(Integer, nullable=False)  # ej: "2026-01"
+    fechas_clase = Column(JSON, nullable=False)
+
+    mes = Column(Integer, nullable=False)  
     año = Column(Integer, nullable=False)
 
     fecha_pago = Column(Date, nullable=False)
 
     alumna = relationship("Alumna", back_populates="abonos")
+    clase = relationship("Clase", back_populates="abonos")
 
     estado = Column(
         String,
@@ -95,6 +105,8 @@ class Abono(Base):
     cancelada_en = Column(DateTime, nullable=True)
 
     es_recuperacion = Column(Boolean, default=False)
+
+    clases_incluidas = Column(Integer, nullable=False)
 
 
 # ---------- ASISTENCIA ----------

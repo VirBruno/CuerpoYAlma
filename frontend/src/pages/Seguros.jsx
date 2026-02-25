@@ -80,8 +80,10 @@ const handleEdit = (seguro) => {
         {seguros.map((a) => (
           <li key={a.id}>
             {a.numero} (Fecha Vigencia {a.fechaVigencia} - Fecha Pago {a.fechaPago})
-            <button onClick={() => handleEdit(a)}>Editar</button>
-            <button onClick={() => handleDelete(a.id)}>Eliminar</button>
+            <div className="acciones-lista">
+              <button onClick={() => handleEdit(a)}>Editar</button>
+              <button onClick={() => handleDelete(a.id)}>Eliminar</button>
+            </div>
           </li>
         ))}
       </ul>

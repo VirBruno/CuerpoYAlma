@@ -1,14 +1,16 @@
-body {
+body,html {
   margin: 0;
   font-family: "Segoe UI", sans-serif;
   background-color: #f4f2f8;
   color: #2e2e2e;
+  display: flow-root;
+  overflow: hidden;
 }
 
 #root {
-  max-width: 1100px;
-  margin: auto;
-  padding: 40px;
+/*  max-width: 1100px;*/
+ margin: 0px;
+/*  padding: 40px;*/
 }
 
 h1 {
@@ -44,6 +46,7 @@ button {
   border-radius: 8px;
   cursor: pointer;
   transition: 0.2s ease;
+  gap: 6px;
 }
 
 button:hover {
@@ -57,8 +60,158 @@ ul {
 
 li {
   background: white;
-  padding: 12px;
+  padding: 12px 20px; /* Un poco más de aire a los lados */
   border-radius: 10px;
   margin-bottom: 10px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  
+  /* --- NUEVAS PROPIEDADES --- */
+  display: flex;             /* Convierte el li en flexbox */
+  align-items: center;       /* Alinea texto y botones verticalmente al centro */
+  justify-content: space-between; /* Empuja el contenido a los extremos */
+}
+
+/* Usar nuestro propio estilo violeta */
+.selected-day {
+  background-color: #9173a3 !important;
+  color: white !important;
+  border-radius: 4px;
+}
+
+/* El día que tiene clase según el backend (opcional para guía visual) */
+.available-day {
+  font-weight: bold;
+  border: 1px solid #6a1b9a !important;
+}
+
+/* Quitar el círculo azul por defecto de la librería */
+.react-calendar__tile--active {
+  background: none !important;
+  color: black !important;
+}
+
+.acciones-lista {
+  display: flex;
+  gap: 8px; /* <--- Controla la distancia exacta ENTRE Editar y Eliminar */
+  margin-left: auto; /* Refuerza que se empujen a la derecha si el texto es corto */
+}
+
+.card-item {
+  background: white;
+  padding: 15px 25px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  color: #2e2e2e;
+}
+
+.tag-presente {
+  color: #28a745;
+  font-weight: bold;
+  background: #e8f5e9;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.tag-ausente {
+  color: #dc3545;
+  font-weight: bold;
+  background: #fdecea;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+/* Contenedor de cada fila (Tarjeta blanca) */
+.tarjeta-blanca-item {
+  background: white;
+  border-radius: 12px;
+  padding: 15px 20px;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between; /* Esto empuja los botones a la derecha */
+  align-items: center;
+  color: #4a148c; /* Morado oscuro para el texto */
+}
+
+/* Grupo de botones a la derecha */
+.acciones-derecha {
+  display: flex;
+  gap: 10px;
+}
+
+/* Badge de RESERVADA */
+.badge-estado {
+  background: #ffebee;
+  color: #d32f2f;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  margin-left: 15px;
+}
+
+/* Modal Estilo Básico */
+.modal-fondo-oscuro {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-caja {
+  background: white;
+  padding: 30px;
+  border-radius: 15px;
+  min-width: 300px;
+}
+
+.badge-asistencia.asistio {
+  background: #e8f5e9;
+  color: #2e7d32;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: bold;
+}
+
+.badge-asistencia.no-asistio {
+  background: #ffebee;
+  color: #c62828;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: bold;
+}
+
+.lista-check-alumnas {
+  max-height: 200px;
+  overflow-y: auto;
+  margin: 20px 0;
+  text-align: left;
+}
+
+.check-item {
+  display: block;
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  color: #4a148c;
+}
+
+.check-item input {
+  margin-right: 15px;
+  transform: scale(1.3);
+}
+
+.input-busqueda {
+  padding: 8px 15px;
+  border-radius: 20px;
+  border: 1px solid #ddd;
+  margin-left: 10px;
+  width: 250px;
 }

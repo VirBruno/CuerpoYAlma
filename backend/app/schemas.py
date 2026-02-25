@@ -1,4 +1,5 @@
 from datetime import date, time, datetime
+from typing import Optional
 from pydantic import BaseModel
 
 class ProfeBase(BaseModel):
@@ -61,12 +62,15 @@ class ClaseResponse(ClaseBase):
 
 class AbonoBase(BaseModel):
     alumna_id: int
+    clase_id: int # <--- AGREGAR ESTO para que FastAPI no lo rechace al recibirlo
     mes: int
     año: int
     fecha_pago: date
-    cancelada_en: datetime | None
+    cancelada_en: Optional[datetime] = None
     es_recuperacion: bool = False
-    estado: str
+    estado: str = "RESERVADA"
+    clases_incluidas: int
+    fechas_clase: list[date]
 
 class AbonoCreate(AbonoBase):
     pass
@@ -81,12 +85,15 @@ class AbonoUpdate(BaseModel):
 class AbonoResponse(BaseModel):
     id: int
     alumna_id: int
+    clase_id: int
     mes: int
     año: int
     fecha_pago: date
     cancelada_en: datetime | None
     es_recuperacion: bool = False
     estado: str
+    fechas_clase: list[date]
+    clases_incluidas: int
 
     class Config:
         from_attributes = True
@@ -105,7 +112,7 @@ class AsistenciaClaseCreate(AsistenciaClaseBase):
 class AsistenciaClaseResponse(AsistenciaClaseBase):
     id: int
     estado: str
-    creada_en: datetime
+    creada_en: Optional[datetime] = None
 
     class Config:
         from_attributes = True

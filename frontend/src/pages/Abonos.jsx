@@ -5,7 +5,9 @@ import { getClases } from "../services/clases";
 import { createAsistencia } from "../services/asistencias"; 
 import Modal from "../components/Modal";
 import Calendar from 'react-calendar';
-import 'react-calendar/dist/Calendar.css'; 
+import 'react-calendar/dist/Calendar.css';
+// npm install date-fns
+import { startOfMonth, endOfMonth, eachDayOfInterval, getDay } from 'date-fns'; 
 
 export default function Abonos() {
   const [editandoId, setEditandoId] = useState(null);
@@ -47,14 +49,17 @@ export default function Abonos() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const hoy = new Date();
     const payload = {
       alumna_id: Number(alumnaId),
       clase_id: Number(claseId),
-      mes: Number(mes),
-      año: Number(año),
-      fecha_pago: fechaPago || null,
+      mes: Number(mes || hoy.getMonth() + 1), 
+      año: Number(año || hoy.getFullYear()),
+      fecha_pago: fechaPago || formatearFecha(hoy),
       clases_incluidas: fechasSeleccionadas.length,
+      fechas_clase: fechasSeleccionadas,
       es_recuperacion: esRecuperacion,
+      estado: "RESERVADA"
     };
 
     try {
@@ -66,19 +71,6 @@ export default function Abonos() {
         resAbono = await createAbono(payload);
       }
 
-      // 2. Crear las asistencias individuales (Reservas)
-      // Solo si es una creación nueva
-      if (!editandoId) {
-        const promesas = fechasSeleccionadas.map(fecha => 
-          createAsistencia({
-            alumna_id: Number(alumnaId),
-            clase_id: Number(claseId),
-            fecha: fecha,
-            estado: "RESERVADA"
-          })
-        );
-        await Promise.all(promesas);
-      }
 
       setModalOpen(false);
       resetForm();
@@ -102,7 +94,23 @@ export default function Abonos() {
       <h2>Abonos</h2>
       <button onClick={() => { resetForm(); setModalOpen(true); }}>Crear Nuevo Abono</button>
 
-      {/* Renderizado de la lista... igual al tuyo */}
+            <ul>
+        {abonos.map((a) => {
+          console.log("Datos del abono:", a); 
+          console.log("Lista de clases actual:", clases);
+
+          const alumna = alumnas.find(al => al.id == a.alumna_id);
+          const clase = clases.find(c => c.id == a.clase_id);
+          return (
+          <li key={a.id}>
+            {alumna?.nombre || "Alumna no encontrada"} - Clase: {clase?.disciplina || "Clase no encontrada"} - Cantidad Clases: {a.clases_incluidas}
+            <div className="acciones-lista">
+              <button onClick={() => handleEdit(a)}>Editar</button>
+              <button onClick={() => handleDelete(a.id)}>Eliminar</button>
+            </div>
+          </li>
+        );})}
+      </ul>
       
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Carga de Abono">
         <form onSubmit={handleSubmit} className="form">
@@ -122,35 +130,66 @@ export default function Abonos() {
 
           {claseId && (
             <div className="calendar-container">
-              <Calendar
-                // Deshabilita días que no son de esta clase
-                //tileDisabled={({ date }) => !fechasDisponibles.includes(formatearFecha(date))}
-                onClickDay={(date) => {
-                  const f = formatearFecha(date);
-                  if (!fechasDisponibles.includes(f)) return; // Evita seleccionar días inválidos
+            <Calendar
+              value={null} // <--- Esto evita que el círculo azul salte de un día a otro
+              onClickDay={(date) => {
+                const f = formatearFecha(date);
+                
+                // Si no hay restricciones del backend, o si la fecha está en las permitidas
+                if (fechasDisponibles.length === 0 || fechasDisponibles.includes(f)) {
                   setFechasSeleccionadas(prev => 
-                    prev.includes(f) ? prev.filter(x => x !== f) : [...prev, f]
+                    prev.includes(f) 
+                      ? prev.filter(x => x !== f) // Si ya estaba, la saco
+                      : [...prev, f]              // Si no estaba, la agrego
                   );
-                }}
-                // Agregamos una clase visual a los días seleccionados
-                tileClassName={({ date }) => 
-                  fechasSeleccionadas.includes(formatearFecha(date)) ? 'selected-day' : null
                 }
-              />
+              }}
+              tileClassName={({ date }) => {
+                const f = formatearFecha(date);
+                let classes = "";
+                if (fechasSeleccionadas.includes(f)) classes += ' selected-day';
+                if (fechasDisponibles.includes(f)) classes += ' available-day';
+                return classes;
+              }}
+            />
               
               <label style={{ display: 'block', marginTop: '10px' }}>
                 <input 
                   type="checkbox" 
                   checked={todoMes} 
                   onChange={() => {
+                    if (!todoMes) {
+                      // Si el backend no trajo nada, calculamos los lunes del mes actual a mano
+                      if (fechasDisponibles.length === 0) {
+                        const hoy = new Date();
+                        const inicio = startOfMonth(hoy);
+                        const fin = endOfMonth(hoy);
+                        const diasDelMes = eachDayOfInterval({ start: inicio, end: fin });
+                        
+                        // Filtramos solo los lunes (getDay === 1)
+                        const lunes = diasDelMes
+                          .filter(date => getDay(date) === 1)
+                          .map(date => formatearFecha(date));
+                        
+                        setFechasSeleccionadas(lunes);
+                      } else {
+                        setFechasSeleccionadas([...fechasDisponibles]);
+                      }
+                    } else {
+                      setFechasSeleccionadas([]);
+                    }
                     setTodoMes(!todoMes);
-                    setFechasSeleccionadas(!todoMes ? [...fechasDisponibles] : []);
-                  }} 
+                  }}
                 /> Seleccionar todos los {clases.find(c => c.id == claseId)?.dia} del mes
               </label>
             </div>
           )}
-
+            {/* FECHA */}
+            <input
+              type="date"
+              value={fechaPago}
+              onChange={(e) => setFechaPago(e.target.value)}
+            />
           <button type="submit" className="btn-primary" //disabled={fechasSeleccionadas.length === 0 || !alumnaId}>
             >Generar Abono - {fechasSeleccionadas.length} Clases reservadas
           </button>
