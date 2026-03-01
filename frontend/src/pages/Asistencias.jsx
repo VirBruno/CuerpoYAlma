@@ -1,58 +1,133 @@
 import React, { useState, useEffect } from "react";
+import client from "../client";
+import { getAlumnas } from "../services/alumnas";
 
 const Asistencias = () => {
-  // 1. ESTADOS PRINCIPALES
-  const [registros, setRegistros] = useState([
-    { id: 1, alumna: "Vir", clase: "Pole Fijo", fecha: "2023-10-25", estado: "ASISTIÓ" },
-    { id: 2, alumna: "Euge", clase: "Pole Fijo", fecha: "2023-10-25", estado: "FALTÓ" },
-  ]);
+const [registros, setRegistros] = useState([]);
+const [showModal, setShowModal] = useState(false);
+const [step, setStep] = useState(1);
+const [loading, setLoading] = useState(false);
+const [alumnas, setAlumnas] = useState([]);
+const [estado, setEstado] = useState("");
 
-  const [showModal, setShowModal] = useState(false);
-  const [step, setStep] = useState(1); // Paso 1: Filtro, Paso 2: Checkbox
-  
-  // Estados para el formulario del modal
+
+  const [clasesDisponibles, setClasesDisponibles] = useState([]); 
   const [claseSel, setClaseSel] = useState("");
   const [fechaSel, setFechaSel] = useState("");
   const [alumnasEncontradas, setAlumnasEncontradas] = useState([]);
-  
-  // Estado para la búsqueda/filtro en el historial
+
+    const handleEdit = (asistencia) => {
+      setEditandoId(asistencia.id);
+      setAlumnas(asistencia.alumna_id);
+      setClaseSel(asistencia.clase_id);
+      setFechaSel(asistencia.fecha_clase);
+      setEstado(asistencia.estado);
+  };
+
+  // Estado para la búsqueda
   const [busquedaAlumna, setBusquedaAlumna] = useState("");
 
-  // 2. SIMULACIÓN DE CRUCE DE ABONOS (Aquí es donde "traerías" de la DB)
-  const buscarReservas = () => {
-    if (!claseSel || !fechaSel) return alert("Completa clase y fecha");
+  // 2. CARGA INICIAL: Traer historial y clases
+  useEffect(() => {
+    cargarRegistros();
+    // Traemos las clases para el select
+    client.get("/clases").then(res => setClasesDisponibles(res.data));
+    // Traemos las alumnas para el buscador
+    getAlumnas().then(res => setAlumnas(res.data));
+  }, []);
 
-    // Simulamos que el sistema busca quién tiene reserva para esa clase
-    // En el futuro, aquí harías un fetch a tu backend
-    const mockReservas = [
-      { idAlumna: 101, nombre: "Vir", checked: false },
-      { idAlumna: 102, nombre: "Euge", checked: false },
-      { idAlumna: 103, nombre: "Andre", checked: false },
-    ];
+  const cargarRegistros = async () => {
+    try {
+      const res = await client.get("/asistencias");
+
+      const dataMapeada = res.data.map(a => ({
+        id: a.id,
+        alumna: `${a.alumna?.nombre}`,
+        clase: a.clase?.nombre, 
+        fecha: a.fecha_clase,
+        estado: a.estado
+      }));
+      setRegistros(dataMapeada);
+    } catch (err) {
+      console.error("Error cargando asistencias", err);
+    }
+  };
+
+  // 3. BUSCAR ALUMNAS (Conecta con tu endpoint /asistencias/clase-dia)
+const buscarReservas = async () => {
+  if (!claseSel || !fechaSel) return alert("Completa clase y fecha");
+  setLoading(true);
+  try {
+    const res = await client.get(`/asistencias/clase-dia?clase_id=${claseSel}&fecha=${fechaSel}`);
     
-    setAlumnasEncontradas(mockReservas);
-    setStep(2); // Pasamos a la lista de checkboxes
+    // VALIDACIÓN: Si 'alumnas' no está cargado, no podemos cruzar datos
+    if (!alumnas || alumnas.length === 0) {
+        throw new Error("La lista general de alumnas no está cargada en el estado.");
+    }
+
+    if (res.data.length === 0) {
+      alert("No hay alumnas con abono o reserva.");
+      setAlumnasEncontradas([]);
+    } else {
+      const mapeadas = res.data.map(itemBackend => {
+      const alumnaInfo = alumnas.find(al => al.id === itemBackend.alumna_id);
+        
+        return {
+          idAlumna: itemBackend.alumna_id,
+          nombre: alumnaInfo 
+            ? `${alumnaInfo.nombre}` 
+            : "Nombre no encontrado",
+        };
+      });
+      setAlumnasEncontradas(mapeadas);
+      setStep(2);
+    }
+  } catch (err) {
+    console.error("Error detallado:", err); // ESTO TE DIRÁ EL ERROR REAL EN CONSOLA
+    alert("Error al buscar alumnas: " + (err.response?.data?.detail || err.message));
+  } finally {
+    setLoading(false);
+  }
+};
+
+  // 4. GUARDAR CAMBIOS (Conecta con /asistencias/actualizar-masivo)
+  const finalizarPaseLista = async () => {
+    const presentes = alumnasEncontradas
+      .filter(a => a.checked)
+      .map(a => a.idAlumna);
+
+    try {
+      await client.put("/asistencias/actualizar-masivo", {
+        clase_id: parseInt(claseSel),
+        fecha: fechaSel,
+        alumnas_presentes: presentes
+      });
+      alert("Lista actualizada correctamente");
+      cargarRegistros();
+      resetModal();
+    } catch (err) {
+      alert("Error al actualizar la lista");
+    }
   };
 
-  // 3. GUARDAR EL REGISTRO FINAL
-  const finalizarPaseLista = () => {
-    const nuevosRegistros = alumnasEncontradas.map(a => ({
-      id: Date.now() + Math.random(),
-      alumna: a.nombre,
-      clase: claseSel,
-      fecha: fechaSel,
-      estado: a.checked ? "ASISTIÓ" : "FALTÓ"
-    }));
-
-    setRegistros([...nuevosRegistros, ...registros]);
-    resetModal();
+  const handleDelete = async (id) => {
+    if (window.confirm("¿Eliminar este registro?")) {
+      try {
+        await client.delete(`/asistencias/${id}`);
+        cargarRegistros();
+      } catch (err) {
+        alert("Error al eliminar");
+      }
+    }
   };
 
+  // --- Helpers ---
   const resetModal = () => {
     setShowModal(false);
     setStep(1);
     setClaseSel("");
     setFechaSel("");
+    setAlumnasEncontradas([]);
   };
 
   const handleCheckboxChange = (index) => {
@@ -61,9 +136,8 @@ const Asistencias = () => {
     setAlumnasEncontradas(updated);
   };
 
-  // 4. FILTRO DE BÚSQUEDA POR ALUMNA
   const registrosFiltrados = registros.filter(r => 
-    r.alumna.toLowerCase().includes(busquedaAlumna.toLowerCase())
+    r.alumna?.toLowerCase().includes(busquedaAlumna.toLowerCase())
   );
 
   return (
@@ -104,8 +178,8 @@ const Asistencias = () => {
             </div>
             
             <div className="acciones-derecha">
-              <button className="btn-accion editar">Editar</button>
-              <button className="btn-accion eliminar">Eliminar</button>
+              <button className="btn-accion editar" onClick={() => handleEdit(reg)}>Editar</button>
+              <button className="btn-accion eliminar" onClick={() => handleDelete(reg.id)}>Eliminar</button>
             </div>
           </div>
         ))}
@@ -120,10 +194,17 @@ const Asistencias = () => {
             {step === 1 ? (
               <div className="modal-step-1">
                 <p>Selecciona la clase y fecha para cruzar abonos:</p>
-                <select className="input-select" value={claseSel} onChange={e => setClaseSel(e.target.value)}>
+                <select 
+                  className="input-select" 
+                  value={claseSel} 
+                  onChange={e => setClaseSel(e.target.value)}
+                >
                   <option value="">Seleccionar clase</option>
-                  <option value="Pole Fijo">Pole Fijo</option>
-                  <option value="Flexibilidad">Flexibilidad</option>
+                  {clasesDisponibles.map(c => (
+                    <option key={c.id} value={c.id}>
+                      {c.disciplina} {c.dia} {c.hora}
+                    </option>
+                  ))}
                 </select>
                 <input type="date" className="input-fecha" value={fechaSel} onChange={e => setFechaSel(e.target.value)} />
                 <div className="modal-botones">

@@ -62,6 +62,17 @@ export default function Abonos() {
       estado: "RESERVADA"
     };
 
+    const handleEdit = (abono) => {
+      setEditandoId(abono.id);
+      setAlumnaId(abono.alumna_id);
+      setClaseId(abono.clase_id);
+      setMes(abono.mes);
+      setAño(abono.año);
+      setFechaPago(abono.fecha_pago);
+      setEsRecuperacion(abono.es_recuperacion);
+      setModalOpen(true);
+  };
+
     try {
       // 1. Crear o actualizar el abono
       let resAbono;

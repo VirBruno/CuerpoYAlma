@@ -5,6 +5,9 @@ from datetime import datetime, timedelta,date
 import calendar
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func
+from sqlalchemy import cast, String
+from sqlalchemy.dialects.postgresql import JSONB
+
 
 
 from app.database import engine, Base, get_db
@@ -505,15 +508,15 @@ from datetime import date
 @app.get("/resumen-mensual")
 def resumen_mensual(mes: int, año: int, db: Session = Depends(get_db)):
 
-    # 1️⃣ Alumnas con abono activo ese mes
+# 1️⃣ Alumnas con abono activo ese mes (CONTEO DISTINTIVO CORREGIDO)
     alumnas_activas = (
-        db.query(Abono)
+        db.query(func.count(func.distinct(Abono.alumna_id)))
         .filter(
             Abono.mes == mes,
             Abono.año == año
         )
-        .count()
-    )
+        .scalar()  # Ejecuta la consulta y devuelve el número (o None)
+    ) or 0
 
     # 2️⃣ Total asistencias activas del mes
     asistencias_totales = (
@@ -549,35 +552,49 @@ def resumen_mensual(mes: int, año: int, db: Session = Depends(get_db)):
 
 @app.put("/asistencias/actualizar-masivo")
 def actualizar_asistencias_masivo(data: AsistenciaMasivaUpdate, db: Session = Depends(get_db)):
-    # data contiene: clase_id, fecha y lista de ids de alumnas que SI vinieron
-
-    # 1. Obtenemos todas las asistencias generadas previamente para esa clase y fecha
-    asistencias_planificadas = (
-        db.query(AsistenciaClase)
+    # 1. Buscamos en ABONOS quiénes están planificados para hoy
+    fecha_str = data.fecha.isoformat()
+    planificados = (
+        db.query(Abono)
         .filter(
-            AsistenciaClase.clase_id == data.clase_id,
-            AsistenciaClase.fecha_clase == data.fecha
+            Abono.clase_id == data.clase_id,
+            cast(Abono.fechas_clase, String).like(f"%{fecha_str}%")
         )
         .all()
     )
 
-    if not asistencias_planificadas:
-        raise HTTPException(404, "No hay lista de espera/abonos cargados para esta clase hoy")
+    if not planificados:
+        raise HTTPException(404, "No hay alumnas planificadas (con abono) para esta clase hoy")
 
-    actualizadas = 0
-    for registro in asistencias_planificadas:
-        # Si el ID de la alumna está en la lista de presentes que mandó el front
-        if registro.alumna_id in data.alumnas_presentes:
-            registro.estado = "ASISTIO"
+    procesadas = 0
+    for plan in planificados:
+        # 2. Por cada planificado, buscamos su registro real en AsistenciaClase
+        asistencia = db.query(AsistenciaClase).filter(
+            AsistenciaClase.alumna_id == plan.alumna_id,
+            AsistenciaClase.clase_id == data.clase_id,
+            AsistenciaClase.fecha_clase == data.fecha
+        ).first()
+
+        # Determinamos el estado según si su ID está en la lista que mandó el front
+        nuevo_estado = "ASISTIO" if plan.alumna_id in data.alumnas_presentes else "FALTO"
+
+        if asistencia:
+            # Si ya existía el registro (creado por el abono), solo actualizamos estado
+            asistencia.estado = nuevo_estado
         else:
-            registro.estado = "FALTO"
-        actualizadas += 1
+            # Si por alguna razón no existía, lo creamos de cero
+            nueva_asistencia = AsistenciaClase(
+                alumna_id=plan.alumna_id,
+                clase_id=data.clase_id,
+                fecha_clase=data.fecha,
+                estado=nuevo_estado
+            )
+            db.add(nueva_asistencia)
+        
+        procesadas += 1
 
     db.commit()
-    return {
-        "detail": "Pase de lista completado",
-        "alumnas_procesadas": actualizadas
-    }
+    return {"detail": "Pase de lista procesado", "total": procesadas}
 
 # ===================== LISTA FILTRADA PARA EL FRONTEND =====================
 
@@ -587,24 +604,21 @@ def obtener_lista_asistencia_frontend(clase_id: int, fecha: date, db: Session = 
     Este endpoint es el que usará Asistencias.jsx para mostrar el listado
     de alumnas que DEBERÍAN estar hoy en clase.
     """
-    asistencias = (
-        db.query(AsistenciaClase)
+    fecha_str = fecha.isoformat()
+    abonos = (
+        db.query(Abono)
         .filter(
-            AsistenciaClase.clase_id == clase_id,
-            AsistenciaClase.fecha_clase == fecha
+            Abono.clase_id == clase_id,
+            cast(Abono.fechas_clase, String).like(f"%{fecha_str}%")
         )
         .all()
     )
 
     return [
         {
-            "alumna_id": a.alumna.id,
-            "nombre": a.alumna.nombre,
-            "apellido": a.alumna.apellido,
-            "estado_actual": a.estado,
-            "seguro_al_dia": a.alumna.seguros[-1].vencimiento > date.today() if a.alumna.seguros else False
+            "alumna_id": a.alumna.id,    
         }
-        for a in asistencias
+        for a in abonos
     ]
 
 # ===================== LISTA CLASE DEL DÍA =====================
@@ -616,7 +630,7 @@ def obtener_lista_clase(clase_id: int, fecha: date, db: Session = Depends(get_db
         db.query(AsistenciaClase)
         .filter(
             AsistenciaClase.clase_id == clase_id,
-            AsistenciaClase.fecha_clase == fecha
+            AsistenciaClase.fecha_clase.contains([fecha])
         )
         .all()
     )
