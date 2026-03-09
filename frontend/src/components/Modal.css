@@ -22,11 +22,28 @@
 
 .modal-close {
   position: absolute;
-  top: 15px;
-  right: 18px;
-  border: none;
-  background: none;
-  font-size: 22px;
+  top: -12px;     /* Lo saca un poco hacia arriba */
+  right: -12px;   /* Lo saca un poco hacia la derecha */
+  width: 30px;
+  height: 30px;
+  border: 2px solid white;
+  background-color: #ff4d4d; /* Fondo rojo */
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+  border-radius: 50%; /* Círculo perfecto */
   cursor: pointer;
-  color: #5b2db5;
+  display: flex;           /* Flexbox para centrar la X */
+  align-items: center;     /* Centrado vertical */
+  justify-content: center; /* Centrado horizontal */
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  transition: transform 0.2s, background-color 0.2s;
+  z-index: 1010;
+  line-height: 1;         /* Evita que el texto se mueva hacia abajo */
+  padding: 0;             /* Quita paddings internos del botón */
+}
+
+.modal-close:hover {
+  background-color: #e60000;
+  transform: scale(1.1);
 }

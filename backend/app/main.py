@@ -466,6 +466,69 @@ def disponibilidad_abono(alumna_id: int, db: Session = Depends(get_db)):
     }
 
 
+@app.get("/abonos/{abono_id}", response_model=AbonoResponse)
+def obtener_abono(abono_id: int, db: Session = Depends(get_db)):
+    abono = db.get(Abono, abono_id)
+    if not abono:
+        raise HTTPException(404, "Abono no encontrado")
+    return abono
+
+@app.put("/abonos/{abono_id}", response_model=AbonoResponse)
+def actualizar_abono(abono_id: int, datos: AbonoUpdate, db: Session = Depends(get_db)):
+    abono = db.get(Abono, abono_id)
+    if not abono:
+        raise HTTPException(404, "Abono no encontrado")
+
+    # Usamos model_dump para trabajar con un diccionario limpio
+    update_data = datos.model_dump(exclude_unset=True)
+
+    # 1. Sincronización de fechas (Si vienen en el body)
+    if "fechas_clase" in update_data:
+        nuevas_fechas_objs = update_data["fechas_clase"] # Son objetos date
+        viejas_fechas_str = set(abono.fechas_clase or [])
+        nuevas_fechas_str = set([f.isoformat() for f in nuevas_fechas_objs])
+
+        fechas_a_eliminar = viejas_fechas_str - nuevas_fechas_str
+        fechas_a_agregar = nuevas_fechas_str - viejas_fechas_str
+
+        # Eliminar las que ya no están
+        if fechas_a_eliminar:
+            db.query(AsistenciaClase).filter(
+                AsistenciaClase.alumna_id == abono.alumna_id,
+                AsistenciaClase.clase_id == abono.clase_id,
+                AsistenciaClase.fecha_clase.in_([date.fromisoformat(f) for f in fechas_a_eliminar]),
+                AsistenciaClase.estado == "RESERVADA"
+            ).delete(synchronize_session=False)
+
+        # Agregar las nuevas
+        for f_str in fechas_a_agregar:
+            fecha_obj = date.fromisoformat(f_str)
+            validar_cupo(db, abono.clase_id, fecha_obj)
+            nueva_asistencia = AsistenciaClase(
+                alumna_id=abono.alumna_id,
+                clase_id=abono.clase_id,
+                fecha_clase=fecha_obj,
+                estado="RESERVADA"
+            )
+            db.add(nueva_asistencia)
+        
+        # Actualizamos el campo en el objeto abono (como lista de strings)
+        abono.fechas_clase = list(nuevas_fechas_str)
+        abono.clases_incluidas = len(nuevas_fechas_str)
+
+    # 2. Actualizar el resto de los campos (excepto fechas_clase que ya lo hicimos)
+    for key, value in update_data.items():
+        if key != "fechas_clase":
+            setattr(abono, key, value)
+
+    try:
+        db.commit()
+        db.refresh(abono)
+        return abono
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Error al actualizar: {str(e)}")
+
 # ================================RESUMEN ABONO==========================================
 @app.get("/abonos/resumen/{alumna_id}")
 def resumen_abono(alumna_id: int, mes: int, año: int, db: Session = Depends(get_db)):

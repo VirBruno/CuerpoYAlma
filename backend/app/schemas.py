@@ -77,8 +77,10 @@ class AbonoCreate(AbonoBase):
 
 class AbonoUpdate(BaseModel):
     alumna_id: int | None = None
+    clase_id: int | None = None
     mes: int | None = None
     fecha_pago: date | None = None
+    fechas_clase: list[date] | None = None
 
 
 

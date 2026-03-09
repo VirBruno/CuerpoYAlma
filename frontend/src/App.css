@@ -215,3 +215,41 @@ li {
   margin-left: 10px;
   width: 250px;
 }
+
+/* 1. Color general para los números del calendario (Gris oscuro/negro) */
+.react-calendar__tile {
+  color: #444 !important; /* Un gris oscuro para que se lea bien */
+  font-weight: 500;
+}
+
+/* 2. Color para los nombres de los días (LUN, MAR, MIÉ...) */
+.react-calendar__month-view__days__day--neighboringMonth,
+.react-calendar__month-view__weekdays__weekday abbr {
+  color: #666 !important; /* Gris medio */
+  text-decoration: none;
+}
+
+/* 3. Color del título del mes y año (arriba) */
+.react-calendar__navigation button {
+  color: #5b2db5 !important; /* Usamos tu violeta para el título */
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+/* 4. Días de otros meses (que aparecen claritos) */
+.react-calendar__month-view__days__day--neighboringMonth {
+  color: #ccc !important; /* Gris muy clarito */
+}
+
+/* 5. Asegurar que al pasar el mouse sigan siendo legibles */
+.react-calendar__tile:enabled:hover,
+.react-calendar__tile:enabled:focus {
+  background-color: #f0eafc !important;
+  color: #5b2db5 !important;
+}
+
+/* 6. Mantener el blanco SOLO cuando el día está seleccionado (violeta) */
+.selected-day {
+  background-color: #9173a3 !important;
+  color: white !important;
+}
