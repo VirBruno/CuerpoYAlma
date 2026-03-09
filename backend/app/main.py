@@ -254,7 +254,7 @@ def clases_usadas(alumna_id, mes, año, db):
         db.query(AsistenciaClase)
         .filter(
             AsistenciaClase.alumna_id == alumna_id,
-            AsistenciaClase.estado.in_(["ACTIVA", "ASISTIO"]),
+            AsistenciaClase.estado.in_(["ACTIVA", "ASISTIÓ"]),
             extract("month", AsistenciaClase.fecha_clase) == mes,
             extract("year", AsistenciaClase.fecha_clase) == año,
         )
@@ -328,6 +328,36 @@ def cancelar_asistencia(asistencia_id: int, db: Session = Depends(get_db)):
     db.commit()
 
     return {"detail": "Asistencia cancelada correctamente"}
+
+@app.patch("/asistencias/{asistencia_id}")
+def editar_asistencia(asistencia_id: int, data: dict, db: Session = Depends(get_db)):
+    # 1. Buscar el registro
+    asistencia = db.get(AsistenciaClase, asistencia_id)
+    
+    if not asistencia:
+        raise HTTPException(
+            status_code=404,
+            detail="Asistencia no encontrada"
+        )
+
+    # 2. Actualizar los campos que vengan en el body
+    # El diccionario 'data' viene del client.patch del frontend
+    if "alumna_id" in data:
+        asistencia.alumna_id = data["alumna_id"]
+    if "clase_id" in data:
+        asistencia.clase_id = data["clase_id"]
+    if "fecha_clase" in data:
+        asistencia.fecha_clase = data["fecha_clase"]
+    if "estado" in data:
+        asistencia.estado = data["estado"]
+
+    try:
+        db.commit()
+        db.refresh(asistencia)
+        return {"status": "success", "message": "Registro actualizado"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))    
 
 
 # ===================== ABONOS =====================
@@ -529,13 +559,13 @@ def resumen_mensual(mes: int, año: int, db: Session = Depends(get_db)):
         .count()
     )
 
-    # 3️⃣ Clases usadas (ASISTIO)
+    # 3️⃣ Clases usadas (ASISTIÓ)
     clases_usadas = (
         db.query(AsistenciaClase)
         .filter(
             func.extract("month", AsistenciaClase.fecha_clase) == mes,
             func.extract("year", AsistenciaClase.fecha_clase) == año,
-            AsistenciaClase.estado == "ASISTIO"
+            AsistenciaClase.estado == "ASISTIÓ"
         )
         .count()
     )
@@ -576,7 +606,7 @@ def actualizar_asistencias_masivo(data: AsistenciaMasivaUpdate, db: Session = De
         ).first()
 
         # Determinamos el estado según si su ID está en la lista que mandó el front
-        nuevo_estado = "ASISTIO" if plan.alumna_id in data.alumnas_presentes else "FALTO"
+        nuevo_estado = "ASISTIÓ" if plan.alumna_id in data.alumnas_presentes else "FALTÓ"
 
         if asistencia:
             # Si ya existía el registro (creado por el abono), solo actualizamos estado
