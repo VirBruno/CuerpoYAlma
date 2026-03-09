@@ -62,17 +62,6 @@ export default function Abonos() {
       estado: "RESERVADA"
     };
 
-    const handleEdit = (abono) => {
-      setEditandoId(abono.id);
-      setAlumnaId(abono.alumna_id);
-      setClaseId(abono.clase_id);
-      setMes(abono.mes);
-      setAño(abono.año);
-      setFechaPago(abono.fecha_pago);
-      setEsRecuperacion(abono.es_recuperacion);
-      setModalOpen(true);
-  };
-
     try {
       // 1. Crear o actualizar el abono
       let resAbono;
@@ -92,6 +81,21 @@ export default function Abonos() {
     }
   };
 
+  const handleEdit = (abono) => {
+    setEditandoId(abono.id);
+    setAlumnaId(abono.alumna_id);
+    setClaseId(abono.clase_id);
+    setMes(abono.mes);
+    setAño(abono.año);
+    setFechaPago(abono.fecha_pago || "");
+    setEsRecuperacion(abono.es_recuperacion);
+    
+    // Cargamos las fechas del abono para que se vean en el calendario
+    setFechasSeleccionadas(abono.fechas_clase || []);
+    
+    setModalOpen(true);
+  };
+
   const resetForm = () => {
     setAlumnaId("");
     setClaseId("");
@@ -105,23 +109,24 @@ export default function Abonos() {
       <h2>Abonos</h2>
       <button onClick={() => { resetForm(); setModalOpen(true); }}>Crear Nuevo Abono</button>
 
-            <ul>
-        {abonos.map((a) => {
-          console.log("Datos del abono:", a); 
-          console.log("Lista de clases actual:", clases);
-
-          const alumna = alumnas.find(al => al.id == a.alumna_id);
-          const clase = clases.find(c => c.id == a.clase_id);
-          return (
-          <li key={a.id}>
-            {alumna?.nombre || "Alumna no encontrada"} - Clase: {clase?.disciplina || "Clase no encontrada"} - Cantidad Clases: {a.clases_incluidas}
-            <div className="acciones-lista">
-              <button onClick={() => handleEdit(a)}>Editar</button>
-              <button onClick={() => handleDelete(a.id)}>Eliminar</button>
-            </div>
-          </li>
-        );})}
-      </ul>
+<ul>
+  {abonos.map((a) => {
+    const alumna = alumnas.find(al => al.id === a.alumna_id);
+    const clase = clases.find(c => c.id === a.clase_id);
+    return (
+      <li key={a.id} className="tarjeta-blanca-item">
+        <div className="info-principal">
+          <strong>{alumna ? `${alumna.nombre}` : "Alumna desconocida"}</strong>
+          <span> - {clase?.disciplina || "Sin clase"} {clase?.dia} {clase?.fechas_clase}</span>
+        </div>
+        <div className="acciones-derecha">
+          <button className="btn-accion editar" onClick={() => handleEdit(a)}>Editar</button>
+          <button className="btn-accion eliminar" onClick={() => handleDelete(a.id)}>Eliminar</button>
+        </div>
+      </li>
+    );
+  })}
+</ul>
       
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Carga de Abono">
         <form onSubmit={handleSubmit} className="form">

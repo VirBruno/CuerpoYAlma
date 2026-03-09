@@ -1,237 +1,222 @@
 import React, { useState, useEffect } from "react";
 import client from "../client";
 import { getAlumnas } from "../services/alumnas";
+import { getClases } from "../services/clases";
 
 const Asistencias = () => {
-const [registros, setRegistros] = useState([]);
-const [showModal, setShowModal] = useState(false);
-const [step, setStep] = useState(1);
-const [loading, setLoading] = useState(false);
-const [alumnas, setAlumnas] = useState([]);
-const [estado, setEstado] = useState("");
-
-
-  const [clasesDisponibles, setClasesDisponibles] = useState([]); 
+  const [registros, setRegistros] = useState([]);
+  const [alumnas, setAlumnas] = useState([]);
+  const [clases, setClases] = useState([]);
+  
+  const [showModal, setShowModal] = useState(false);
+  const [modoEdicion, setModoEdicion] = useState(false); // Para diferenciar Carga Masiva vs Editar Uno
+  const [step, setStep] = useState(1);
+  
+  // Estados para formularios/filtros
   const [claseSel, setClaseSel] = useState("");
   const [fechaSel, setFechaSel] = useState("");
   const [alumnasEncontradas, setAlumnasEncontradas] = useState([]);
-
-    const handleEdit = (asistencia) => {
-      setEditandoId(asistencia.id);
-      setAlumnas(asistencia.alumna_id);
-      setClaseSel(asistencia.clase_id);
-      setFechaSel(asistencia.fecha_clase);
-      setEstado(asistencia.estado);
-  };
-
-  // Estado para la búsqueda
   const [busquedaAlumna, setBusquedaAlumna] = useState("");
 
-  // 2. CARGA INICIAL: Traer historial y clases
+  // Estado para el registro que estamos editando
+  const [editForm, setEditForm] = useState({ id: null, alumna_id: "", clase_id: "", fecha: "", estado: "" });
+
   useEffect(() => {
-    cargarRegistros();
-    // Traemos las clases para el select
-    client.get("/clases").then(res => setClasesDisponibles(res.data));
-    // Traemos las alumnas para el buscador
-    getAlumnas().then(res => setAlumnas(res.data));
+    cargarDatos();
   }, []);
 
-  const cargarRegistros = async () => {
-    try {
-      const res = await client.get("/asistencias");
+  const cargarDatos = async () => {
+    const [resAl, resCl, resAs] = await Promise.all([
+      getAlumnas(),
+      getClases(),
+      client.get("/asistencias")
+    ]);
+    setAlumnas(resAl.data);
+    setClases(resCl.data);
+    setRegistros(resAs.data);
+  };
 
-      const dataMapeada = res.data.map(a => ({
-        id: a.id,
-        alumna: `${a.alumna?.nombre}`,
-        clase: a.clase?.nombre, 
-        fecha: a.fecha_clase,
-        estado: a.estado
-      }));
-      setRegistros(dataMapeada);
+  // --- LÓGICA DE EDICIÓN INDIVIDUAL ---
+  const handleEdit = (a) => {
+    setModoEdicion(true);
+    setEditForm({
+      id: a.id,
+      alumna_id: a.alumna_id,
+      clase_id: a.clase_id,
+      fecha: a.fecha_clase,
+      estado: a.estado
+    });
+    setShowModal(true);
+  };
+
+  const guardarCambiosIndividual = async () => {
+    try {
+      await client.patch(`/asistencias/${editForm.id}`, {
+        alumna_id: Number(editForm.alumna_id),
+        clase_id: Number(editForm.clase_id),
+        fecha_clase: editForm.fecha,
+        estado: editForm.estado
+      });
+      alert("Registro actualizado");
+      resetModal();
+      cargarDatos();
     } catch (err) {
-      console.error("Error cargando asistencias", err);
+      alert("Error al actualizar");
     }
   };
 
-  // 3. BUSCAR ALUMNAS (Conecta con tu endpoint /asistencias/clase-dia)
-const buscarReservas = async () => {
-  if (!claseSel || !fechaSel) return alert("Completa clase y fecha");
-  setLoading(true);
-  try {
-    const res = await client.get(`/asistencias/clase-dia?clase_id=${claseSel}&fecha=${fechaSel}`);
-    
-    // VALIDACIÓN: Si 'alumnas' no está cargado, no podemos cruzar datos
-    if (!alumnas || alumnas.length === 0) {
-        throw new Error("La lista general de alumnas no está cargada en el estado.");
-    }
-
-    if (res.data.length === 0) {
-      alert("No hay alumnas con abono o reserva.");
-      setAlumnasEncontradas([]);
-    } else {
-      const mapeadas = res.data.map(itemBackend => {
-      const alumnaInfo = alumnas.find(al => al.id === itemBackend.alumna_id);
-        
+  // --- LÓGICA DE PASE MASIVO ---
+  const buscarReservas = async () => {
+    if (!claseSel || !fechaSel) return alert("Completa clase y fecha");
+    try {
+      const res = await client.get(`/asistencias/clase-dia?clase_id=${claseSel}&fecha=${fechaSel}`);
+      // Aquí cruzamos con la lista de alumnas para tener los nombres en el modal
+      const mapeadas = res.data.map(item => {
+        const info = alumnas.find(al => al.id === item.alumna_id);
         return {
-          idAlumna: itemBackend.alumna_id,
-          nombre: alumnaInfo 
-            ? `${alumnaInfo.nombre}` 
-            : "Nombre no encontrado",
+          idAlumna: item.alumna_id,
+          nombre: info ? `${info.nombre} ${info.apellido || ""}` : "Desconocida",
+          checked: item.estado === "ASISTIÓ"
         };
       });
       setAlumnasEncontradas(mapeadas);
       setStep(2);
-    }
-  } catch (err) {
-    console.error("Error detallado:", err); // ESTO TE DIRÁ EL ERROR REAL EN CONSOLA
-    alert("Error al buscar alumnas: " + (err.response?.data?.detail || err.message));
-  } finally {
-    setLoading(false);
-  }
-};
-
-  // 4. GUARDAR CAMBIOS (Conecta con /asistencias/actualizar-masivo)
-  const finalizarPaseLista = async () => {
-    const presentes = alumnasEncontradas
-      .filter(a => a.checked)
-      .map(a => a.idAlumna);
-
-    try {
-      await client.put("/asistencias/actualizar-masivo", {
-        clase_id: parseInt(claseSel),
-        fecha: fechaSel,
-        alumnas_presentes: presentes
-      });
-      alert("Lista actualizada correctamente");
-      cargarRegistros();
-      resetModal();
     } catch (err) {
-      alert("Error al actualizar la lista");
+      alert("Error al buscar");
     }
+  };
+
+  const finalizarPaseLista = async () => {
+    const presentes = alumnasEncontradas.filter(a => a.checked).map(a => a.idAlumna);
+    await client.put("/asistencias/actualizar-masivo", {
+      clase_id: parseInt(claseSel),
+      fecha: fechaSel,
+      alumnas_presentes: presentes
+    });
+    resetModal();
+    cargarDatos();
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("¿Eliminar este registro?")) {
-      try {
-        await client.delete(`/asistencias/${id}`);
-        cargarRegistros();
-      } catch (err) {
-        alert("Error al eliminar");
-      }
+    if (window.confirm("¿Eliminar?")) {
+      await client.delete(`/asistencias/${id}`);
+      cargarDatos();
     }
   };
 
-  // --- Helpers ---
   const resetModal = () => {
     setShowModal(false);
+    setModoEdicion(false);
     setStep(1);
-    setClaseSel("");
-    setFechaSel("");
-    setAlumnasEncontradas([]);
+    setEditForm({ id: null, alumna_id: "", clase_id: "", fecha: "", estado: "" });
   };
 
-  const handleCheckboxChange = (index) => {
-    const updated = [...alumnasEncontradas];
-    updated[index].checked = !updated[index].checked;
-    setAlumnasEncontradas(updated);
-  };
-
-  const registrosFiltrados = registros.filter(r => 
-    r.alumna?.toLowerCase().includes(busquedaAlumna.toLowerCase())
-  );
+  // Filtrado dinámico para la búsqueda
+  const registrosFiltrados = registros.filter(r => {
+    const alumna = alumnas.find(al => al.id === r.alumna_id);
+    const nombreCompleto = alumna ? `${alumna.nombre} ${alumna.apellido}`.toLowerCase() : "";
+    return nombreCompleto.includes(busquedaAlumna.toLowerCase());
+  });
 
   return (
     <div className="container">
-      <h2 className="titulo-seccion">Asistencias</h2>
+      <h2 className="titulo-seccion">Control de Asistencias</h2>
       
       <div className="acciones-header">
-        <button className="btn-primario" onClick={() => setShowModal(true)}>
-          Hacer Pase de Lista
+        <button className="btn-primario" onClick={() => { setModoEdicion(false); setShowModal(true); }}>
+          Nuevo Pase de Lista
         </button>
-        
-        {/* Input de consulta por alumna */}
         <input 
           type="text" 
-          placeholder="🔍 Consultar por alumna..." 
+          placeholder="🔍 Buscar alumna..." 
           className="input-busqueda"
-          value={busquedaAlumna}
           onChange={(e) => setBusquedaAlumna(e.target.value)}
         />
       </div>
 
-      <hr className="separador-horizontal" />
-
       <div className="historial-lista">
-        <h3 className="subtitulo">
-          {busquedaAlumna ? `Asistencias de: ${busquedaAlumna}` : "Historial de Registros"}
-        </h3>
-        
-        {registrosFiltrados.map((reg) => (
-          <div key={reg.id} className="tarjeta-blanca-item">
-            <div className="info-principal">
-              <span className="alumna-name"><strong>{reg.alumna}</strong></span>
-              <span className="clase-tag">{reg.clase}</span>
-              <span className="fecha-item">— {reg.fecha.split('-').reverse().join('/')}</span>
-              <span className={`badge-asistencia ${reg.estado === "ASISTIÓ" ? "asistio" : "no-asistio"}`}>
-                {reg.estado}
-              </span>
-            </div>
-            
-            <div className="acciones-derecha">
-              <button className="btn-accion editar" onClick={() => handleEdit(reg)}>Editar</button>
-              <button className="btn-accion eliminar" onClick={() => handleDelete(reg.id)}>Eliminar</button>
-            </div>
-          </div>
-        ))}
+        <ul>
+          {registrosFiltrados.map((a) => {
+            // Lógica idéntica a la de Abonos.jsx
+            const alumna = alumnas.find(al => al.id === a.alumna_id);
+            const clase = clases.find(c => c.id === a.clase_id);
+            return (
+              <li key={a.id} className="tarjeta-blanca-item">
+                <div className="info-principal">
+                  <strong>{alumna ? `${alumna.nombre} ${alumna.apellido || ""}` : "Alumna desconocida"}</strong>
+                  <span> - {clase?.disciplina || "Sin clase"} | {a.fecha_clase}</span>
+                  <span className={`badge-asistencia ${a.estado.toLowerCase()}`}> - {a.estado}</span>
+                </div>
+                <div className="acciones-derecha">
+                  <button className="btn-accion editar" onClick={() => handleEdit(a)}>Editar</button>
+                  <button className="btn-accion eliminar" onClick={() => handleDelete(a.id)}>Eliminar</button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       </div>
 
-      {/* MODAL EVOLUCIONADO */}
       {showModal && (
         <div className="modal-fondo-oscuro">
           <div className="modal-caja">
-            <h3 className="modal-titulo">Pase de Lista</h3>
+            <h3>{modoEdicion ? "Editar Asistencia" : "Pase de Lista Masivo"}</h3>
             
-            {step === 1 ? (
-              <div className="modal-step-1">
-                <p>Selecciona la clase y fecha para cruzar abonos:</p>
-                <select 
-                  className="input-select" 
-                  value={claseSel} 
-                  onChange={e => setClaseSel(e.target.value)}
-                >
-                  <option value="">Seleccionar clase</option>
-                  {clasesDisponibles.map(c => (
-                    <option key={c.id} value={c.id}>
-                      {c.disciplina} {c.dia} {c.hora}
-                    </option>
-                  ))}
+            {modoEdicion ? (
+              /* FORMULARIO DE EDICIÓN INDIVIDUAL */
+              <div className="form-edicion">
+                <label>Alumna</label>
+                <select value={editForm.alumna_id} onChange={e => setEditForm({...editForm, alumna_id: e.target.value})}>
+                  {alumnas.map(al => <option key={al.id} value={al.id}>{al.nombre} {al.apellido}</option>)}
                 </select>
-                <input type="date" className="input-fecha" value={fechaSel} onChange={e => setFechaSel(e.target.value)} />
+
+                <label>Clase</label>
+                <select value={editForm.clase_id} onChange={e => setEditForm({...editForm, clase_id: e.target.value})}>
+                  {clases.map(c => <option key={c.id} value={c.id}>{c.disciplina} ({c.dia})</option>)}
+                </select>
+
+                <label>Fecha</label>
+                <input type="date" value={editForm.fecha} onChange={e => setEditForm({...editForm, fecha: e.target.value})} />
+
+                <label>Estado</label>
+                <select value={editForm.estado} onChange={e => setEditForm({...editForm, estado: e.target.value})}>
+                  <option value="ASISTIÓ">ASISTIÓ</option>
+                  <option value="FALTÓ">FALTÓ</option>
+                  <option value="AVISÓ">AVISÓ</option>
+                </select>
+
                 <div className="modal-botones">
-                  <button className="btn-primario" onClick={buscarReservas}>Buscar Alumnas</button>
+                  <button className="btn-primario" onClick={guardarCambiosIndividual}>Guardar</button>
                   <button className="btn-secundario" onClick={resetModal}>Cancelar</button>
                 </div>
               </div>
             ) : (
-              <div className="modal-step-2">
-                <p>Clase: <strong>{claseSel}</strong> | {fechaSel}</p>
-                <div className="lista-check-alumnas">
+              /* PASOS DE CARGA MASIVA */
+              step === 1 ? (
+                <div className="step-1">
+                  <select onChange={e => setClaseSel(e.target.value)}>
+                    <option value="">Seleccionar Clase</option>
+                    {clases.map(c => <option key={c.id} value={c.id}>{c.disciplina} - {c.dia}</option>)}
+                  </select>
+                  <input type="date" onChange={e => setFechaSel(e.target.value)} />
+                  <button className="btn-primario" onClick={buscarReservas}>Siguiente</button>
+                  <button onClick={resetModal}>Cerrar</button>
+                </div>
+              ) : (
+                <div className="step-2">
                   {alumnasEncontradas.map((alum, idx) => (
                     <label key={alum.idAlumna} className="check-item">
-                      <input 
-                        type="checkbox" 
-                        checked={alum.checked} 
-                        onChange={() => handleCheckboxChange(idx)} 
-                      />
-                      {alum.nombre}
+                      <input type="checkbox" checked={alum.checked} onChange={() => {
+                        const copy = [...alumnasEncontradas];
+                        copy[idx].checked = !copy[idx].checked;
+                        setAlumnasEncontradas(copy);
+                      }} /> {alum.nombre}
                     </label>
                   ))}
+                  <button className="btn-primario" onClick={finalizarPaseLista}>Guardar Lista</button>
+                  <button onClick={() => setStep(1)}>Volver</button>
                 </div>
-                <div className="modal-botones">
-                  <button className="btn-primario" onClick={finalizarPaseLista}>Cargar Lista</button>
-                  <button className="btn-secundario" onClick={() => setStep(1)}>Volver</button>
-                </div>
-              </div>
+              )
             )}
           </div>
         </div>
